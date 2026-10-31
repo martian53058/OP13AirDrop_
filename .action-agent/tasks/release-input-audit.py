@@ -1,5 +1,5 @@
 """
-run = true
+run = false
 name = "Audit OP13AirDrop release prerequisites"
 reason = "Inventory the exact local inputs and build prerequisites required by the evidence-gated package builder"
 timeout = 300
