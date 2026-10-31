@@ -1,30 +1,22 @@
 """
-run = false
+run = true
 name = "ColorOS 17 adaptation regression suite"
 reason = "Validate source-level adaptation changes without connecting to or modifying a phone"
 timeout = 1800
 priority = 10
 
 [commands]
-before = []
+before = ["python3 tools/build-lsposed.py --sdk \"$ANDROID_HOME\""]
 run = [
   "python3 tools/check.py",
-  "python3 -m unittest discover -s tests -p 'test_compatibility.py'",
-  "python3 -m unittest discover -s tests -p 'test_chooser_foreground.py'",
-  "python3 -m unittest discover -s tests -p 'test_gms_unlock.py'",
-  "python3 -m unittest discover -s tests -p 'test_history.py'",
-  "python3 -m unittest discover -s tests -p 'test_oshare_installer.py'",
-  "python3 -m unittest discover -s tests -p 'test_receive_lifecycle.py'",
-  "python3 -m unittest discover -s tests -p 'test_release.py'",
-  "python3 -m unittest discover -s tests -p 'test_root_runtime.py'",
-  "python3 -m unittest discover -s tests -p 'test_settings.py'",
-  "python3 -m unittest discover -s tests -p 'test_share_mode.py'",
-  "python3 -m unittest discover -s tests -p 'test_transfer_performance.py'",
-  "python3 -m unittest discover -s tests -p 'test_verify.py'",
+  "python3 -m unittest discover -s tests -p 'test_*.py'",
   "sh oshare/tests/run.sh",
+  "cd webui && npm ci",
   "node tests/test-api.mjs",
   "node tests/test-webui-refresh.mjs",
-  "cd webui && npm ci && npm run check && npm run build"
+  "cd webui && npm run check && npm run build",
+  "cd oshare && ./gradlew :app:assembleDebug --no-daemon"
+
 ]
 after = []
 
