@@ -186,3 +186,18 @@ The full release packager was not run because the original local snapshot archiv
 ## Original module archive needed for final assembly
 
 The two runtime files are now accepted as separate local inputs, but the full package builder still needs the original ColorOS 17.0.0.103 module payload (custom WLAN/Wonder kernel modules, VINTF fragment, permissions, SELinux policy, installer scripts and its hash manifest). The simplest next input is the complete original module ZIP. The packager now accepts that same ZIP as both `--snapshot` and `--installer-base`, after safe ZIP path, duplicate-entry and checksum validation. If the ZIP is unavailable, the separate `local-inputs/coex/module.tar` snapshot and installer-base ZIP are still required.
+
+## Final host validation for native runtime and original ZIP support
+
+ActionAgent run [41214327707](https://github.com/martian53058/OP13AirDrop_/actions/runs/41214327707) completed successfully.
+
+- Source/Python/shell/kernel-map checks passed across 352 files.
+- All 173 Python tests passed, including native ELF validation, launch-path checks and ZIP/tar snapshot extraction tests.
+- OShare regression suite passed.
+- WebUI API and refresh tests, TypeScript validation and production build passed.
+- LSPosed helper JAR and Android bridge Java compilation passed (JDK 17; CI validation override SDK/target 36).
+- ActionAgent reset its one-shot task flag successfully; no device was contacted.
+
+The original module ZIP can now be supplied as both `--snapshot` and `--installer-base`. ZIP extraction rejects duplicate paths, traversal, symlink entries and CRC errors; the existing `SHA256SUMS` checks still validate the archive payload. This avoids requiring the user to create a separate tar archive if they have the original module ZIP.
+
+The full original module ZIP has not yet been supplied, so the release packager has not been run and no installable ZIP has been produced. A signed release bridge APK and its matching signing configuration are also still needed before final assembly.
