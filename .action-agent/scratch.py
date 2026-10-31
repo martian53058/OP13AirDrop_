@@ -1,6 +1,6 @@
 """
-run = false
-name = "ColorOS 17 adaptation regression suite (final native runtime checks)"
+run = true
+name = "ColorOS 17 target WLAN ABI and Hybrid Mount checks"
 reason = "Validate source-level adaptation changes without connecting to or modifying a phone"
 timeout = 1800
 priority = 10
