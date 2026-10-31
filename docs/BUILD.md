@@ -59,9 +59,11 @@ Linux 环境中，将 `ANDROID_HOME` 设为本机 SDK 目录，例如 `$HOME/And
 sdkmanager \
   "platform-tools" \
   "platforms;android-36" \
-  "platforms;android-37" \
   "build-tools;36.0.0" \
   "ndk;28.2.13676358"
+
+# Android 37.0 is currently distributed on SDK Manager channel 1.
+sdkmanager --channel=1 "platforms;android-37.0"
 ```
 
 ## 2. 本地输入
