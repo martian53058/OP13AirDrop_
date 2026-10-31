@@ -19,6 +19,7 @@ import zipfile
 ROOT = Path(__file__).resolve().parents[1]
 from release import emit_metadata, read_properties
 from mosey_apks import extend_callback_manifest, install_apks
+from mosey_runtime import stage_runtime
 
 
 def digest(data):
@@ -57,6 +58,10 @@ def main():
     parser.add_argument('--installer-base', type=Path, required=True)
     parser.add_argument('--mosey-apks', type=Path, required=True,
                         help='Verified original Mosey60715 APKS bundle for this target')
+    parser.add_argument('--mosey-server', type=Path, required=True,
+                        help='Original module-supplied ARM64 mosey_server binary')
+    parser.add_argument('--mosey-ffi', type=Path, required=True,
+                        help='Matching original module-supplied libmosey_daemon_ffi.so')
     args = parser.parse_args()
     properties = read_properties((ROOT / 'module/module.prop').read_text())
     version, version_code = properties['version'], int(properties['versionCode'])
@@ -144,9 +149,12 @@ def main():
     spec = importlib.util.spec_from_file_location('peer_grace', ROOT / 'tools/patch-mosey-peer-grace.py')
     patcher = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(patcher)
+    mosey_runtime, stability = stage_runtime(
+        args.mosey_server, args.mosey_ffi, output, patcher=patcher)
     library = output / 'system/system_ext/lib64/libmosey_daemon_ffi.so'
-    stability = patcher.write_patch(captured / 'system/system_ext/lib64/libmosey_daemon_ffi.so', library)
-    shutil.move(library.with_suffix('.so.peer-grace.json'), output / 'mosey-peer-grace.json')
+    sidecar = library.with_suffix(library.suffix + '.peer-grace.json')
+    if sidecar.exists():
+        shutil.move(sidecar, output / 'mosey-peer-grace.json')
     overlay_sources(output)
     # Only the measured SET_FREQUENCY adapter is new; retain the captured driver
     # and other native helpers rather than shipping experimental kernel payloads.
@@ -184,6 +192,8 @@ def main():
         'bridge_version': bridge_version,
         'mosey_apks_sha256': digest(args.mosey_apks.read_bytes()),
         'mosey_apk_sha256': mosey_hashes,
+        'mosey_runtime': mosey_runtime,
+        'stability_patch_status': mosey_runtime['peer_grace_patch_status'],
         'receive_ui': True,
         'share_mode': True,
         'oshare_source_sha256': {

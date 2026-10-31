@@ -12,6 +12,7 @@ import subprocess
 import tempfile
 import zipfile
 from release import inspect_archive
+from mosey_runtime import inspect_elf
 
 
 def run(command, env):
@@ -87,7 +88,31 @@ def main():
             assert 'receive_directory "$(decode_name_hex "$(read_receive_directory_hex)")"' in settings
             assert 'opairshare_receive_directory_hex' in (module / 'bin/receive-directory.sh').read_text()
             assert build_info['oshare_source_sha256']
-            print('PASS module/bridge version, APK hash, save-directory API and source provenance')
+            ui = (module / 'bin/ui-lifecycle.sh').read_text()
+            assert '. "$MODDIR/bin/receive-startup.sh"' in ui
+            assert ui.index('receive_warmup_start\n') < ui.index('startup_trace PROVIDER_START_BEGIN')
+            assert 'receive_warmup_wait\n' in ui and 'receive_warmup_cleanup\n' in ui
+            assert 'transfer_check=$t' in (module / 'bin/speed-history.sh').read_text()
+            print('PASS module/bridge version, APK hash, save-directory API, receive warmup and source provenance')
+        runtime = build_info.get('mosey_runtime')
+        if runtime:
+            for role, expected_path in (
+                    ('server', 'system/system_ext/bin/mosey_server'),
+                    ('ffi', 'system/system_ext/lib64/libmosey_daemon_ffi.so')):
+                expected = runtime[role]
+                assert expected['path'] == expected_path
+                actual = inspect_elf(module / expected_path)
+                for key in ('size', 'sha256', 'elf_class', 'endianness',
+                            'e_type', 'e_machine', 'build_id', 'soname', 'needed'):
+                    assert actual[key] == expected[key], f'{role}: {key}'
+            ffi_path = module / runtime['ffi']['path']
+            assert hashlib.sha256(ffi_path.read_bytes()).hexdigest() == runtime['ffi']['output_sha256']
+            if build_info.get('stability_patch'):
+                assert runtime['peer_grace_patch_status'] == 'applied_exact_guarded_build'
+            else:
+                assert runtime['peer_grace_patch_status'] == 'not_applied_unrecognized_build_preserved'
+                assert runtime['ffi']['output_sha256'] == runtime['ffi']['sha256']
+            print('PASS original-module Mosey server/FFI ELF identity, dependencies and binary provenance')
         if build_info.get('stability_patch'):
             patch = build_info['stability_patch']
             library = (module / 'system/system_ext/lib64/libmosey_daemon_ffi.so').read_bytes()
@@ -100,12 +125,7 @@ def main():
             restored = bytearray(library)
             struct.pack_into('<I', restored, patch['file_offset'], int(patch['old_instruction'], 16))
             assert hashlib.sha256(restored).hexdigest() == patch['input_sha256']
-            ui = (module / 'bin/ui-lifecycle.sh').read_text()
-            assert '. "$MODDIR/bin/receive-startup.sh"' in ui
-            assert ui.index('receive_warmup_start\n') < ui.index('startup_trace PROVIDER_START_BEGIN')
-            assert 'receive_warmup_wait\n' in ui and 'receive_warmup_cleanup\n' in ui
-            assert 'transfer_check=$t' in (module / 'bin/speed-history.sh').read_text()
-            print('PASS bounded expiry instruction, exact single-instruction binary diff, RX warmup ownership and recorder recheck')
+            print('PASS bounded expiry instruction and exact single-instruction binary diff')
 
         overlays = build_info.get('workspace_overlays', {})
         for name, expected in overlays.items():

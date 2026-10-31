@@ -15,15 +15,16 @@ python3 tools/package-coex.py \
   --bridge oshare/app/build/outputs/apk/release/app-release.apk \
   --installer-base dist/OPAirDrop-v1.0.16.zip \
   --mosey-apks "local-inputs/mosey/Quick Share extension_1.0.980159239.apks" \
-  --mosey-apks "local-inputs/mosey/Quick Share extension_1.0.980159239.apks"
+  --mosey-server local-inputs/mosey/mosey_server \
+  --mosey-ffi local-inputs/mosey/libmosey_daemon_ffi.so
 python3 tools/check-coex.py dist/OPAirDrop-v1.0.23-PJZ110.zip
 ```
 
 模块和桥接版本统一读取 `module/module.prop`，装配前校验 release APK 构建元数据、版本、哈希与分享入口能力。输出 ZIP、SHA256，以及 `dist/v<版本>/` 下的正式在线更新元数据；仅生成本地产物，不自动上传或发布。
 
-默认集成有限 peer 过期宽限、接收宿主并行准备、会话快照唯一归档、实时速度与活动任务计时、流体云进度、接收完成弹窗、自定义接收目录和三种 AirDrop 分享入口。安装升级保留已有共存、范围及性能选择，首次安装默认 Fast；分享入口切换保存后重启生效。
+在 FFI SHA 精确匹配已验证基线时集成有限 peer 过期宽限；其他 FFI build 保留原始二进制。其余功能包括接收宿主并行准备、会话快照唯一归档、实时速度与活动任务计时、流体云进度、接收完成弹窗、自定义接收目录和三种 AirDrop 分享入口。安装升级保留已有共存、范围及性能选择，首次安装默认 Fast；分享入口切换保存后重启生效。
 
-检查器在临时目录验证升级偏好保留、首次安装默认配置、冷启动参数，以及 5745 / 5805 / 2447 / 6115 MHz 会话 prepare/restore；另检查桥接版本、来源哈希、有限 peer 过期补丁、shell 语法和 ZIP 全量校验。主机检查不能替代实机文件收发。
+检查器在临时目录验证升级偏好保留、首次安装默认配置、冷启动参数，以及 5745 / 5805 / 2447 / 6115 MHz 会话 prepare/restore；另检查桥接版本、来源哈希、Mosey 原生 ELF 身份与依赖、可选的精确 peer 过期补丁、shell 语法和 ZIP 全量校验。主机检查不能替代实机文件收发。
 
 ## 1. 环境
 
@@ -67,12 +68,12 @@ sdkmanager \
 | 输入 | 用途 |
 | --- | --- |
 | 原版 Mosey60715 APKS bundle（base.apk + 全部 splits） | 系统包扫描、provider 认证和回调 APK 构建基线；打包时校验全部 15 个 APK 的 SHA256 |
-| `mosey_server` | Binder 原生服务 |
-| `libmosey_daemon_ffi.so` | Mosey 无线协议实现 |
+| `local-inputs/mosey/mosey_server` | 从原模块提取的 Binder 原生服务，按 ELF64/AArch64/依赖校验后原样装配 |
+| `local-inputs/mosey/libmosey_daemon_ffi.so` | 与原服务配套的 Mosey 无线协议库；仅精确匹配已知 SHA 的构建才应用 peer-grace 指令补丁 |
 | 匹配设备的原厂 WLAN 模块 | 导入接口、导出符号与原厂恢复对照 |
 | 同次内核构建的 `Module.symvers` | 模块 ABI 对照 |
 
-当前 callback 构建器对应 Mosey60715。原版 APK、splits 和构建时使用的服务文件应来自同一套适配记录。`local-inputs/reference-r27/` 保存原平台的参考依赖与文件布局。
+当前 callback 构建器对应 Mosey60715。原版 APK、splits、`mosey_server` 与 FFI 应从同一套 ColorOS 17.0.0.103 原模块/适配记录取得。将两份原生文件放在表中路径；它们不会提交到 Git，也不会从 stock ROM 查找。打包器会记录 SHA256、ELF build ID、SONAME 与动态依赖。未知 FFI build 保持字节不变，不猜测补丁偏移。`local-inputs/reference-r27/` 保存原平台的参考依赖与文件布局。
 
 ## 3. WebUI
 

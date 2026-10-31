@@ -150,3 +150,18 @@ The app's checked-in defaults remain compile SDK 37 and target SDK 37. The CI ru
 The WebUI dependency audit reported three high-severity npm advisories; no automatic dependency upgrades were applied.
 
 The workflow's optional issue-comment step received HTTP 410 because Issues are disabled for this repository. This did not affect ActionAgent execution, its successful result, or artifact upload.
+
+## Supplied original-module Mosey runtime files
+
+The owner supplied the two native files separately, identifying them as the missing runtime files from the original module. They are not committed to Git; the package builder accepts them as explicit local inputs.
+
+| File | Size | SHA256 | GNU build ID |
+|---|---:|---|---|
+| `mosey_server` | 1,020,872 bytes | `68f798d3384800fabf81197b670de4defb61e222a458e7d579c1b418758105e5` | `9d6496b83af060ac2f8d512d9ebfaadb` |
+| `libmosey_daemon_ffi.so` | 2,612,056 bytes | `a224006052218527e38c9e8614c92d1165906769aa1438a1b828e854637d4334` | `55b3559ed6c4cfc7b369e7524e97744e` |
+
+Both are ELF64, little-endian, AArch64, ET_DYN. The server depends on `libbinder_ndk.so`, `liblog.so`, `libc.so` and `libdl.so`. The FFI SONAME is `libmosey_daemon_ffi.so`; it depends on `libdl.so`, `liblog.so`, `libc.so` and `libm.so`. The FFI contains `mosey_start_5`, `mosey_stop`, `mosey_update` and `mosey_dump`, and references the expected `wonder0` / `wonderradiotap0` interfaces.
+
+The FFI `.comment` identifies Android Clang 21.0.0 and Rust 1.95 nightly. Its SHA does **not** match the repository's older peer-grace patch input SHA `7de30b96...`. Therefore this uploaded FFI must be copied unchanged. The package builder now applies the old one-instruction peer-grace patch only when the source SHA exactly matches its hard-coded guard; it does not alter an unknown FFI build.
+
+The exact input files have not been runtime-tested on the target phone, and their firmware provenance is based on the owner's identification as files extracted from the original module. The build records both hashes and ELF metadata for later audit.
