@@ -108,3 +108,21 @@ If the exact .103 kernel source archive is available, also provide its matching 
 - Mosey: supplied bundle base matches the repository's old callback input, but not the active base hash previously reported by the owner.
 - Kernel: two source-level Wonder fixes and preflight/rollback guards are committed on the adaptation branch; target ABI has not been verified.
 - Device: untouched. No module has been installed, flashed, or tested on the phone.
+
+
+## Host validation completed
+
+ActionAgent run [41202312350](https://github.com/martian53058/OP13AirDrop_/actions/runs/41202312350) completed successfully on 2026-10-31.
+
+- Repository/static checks passed (345 files).
+- All 153 Python tests passed.
+- `oshare/tests/run.sh` passed all resolver-adjacent, send, receive, chooser, callback, and state-machine regressions.
+- WebUI dependency install, API tests, refresh tests, TypeScript check, and Vite production build passed.
+- The LSPosed helper JAR built successfully.
+- The OShare Android Java sources compiled successfully with Gradle 8.13, JDK 17, compile SDK 36, and a validation-only target SDK 36 override.
+
+The app's checked-in defaults remain compile SDK 37 and target SDK 37. The CI runner did not expose an Android 37 platform package, so this successful host compile is not a claim that the API 37 configuration was compiled. It also did not build/sign a release APK, run DexKit against the supplied APK on Android, or install/test on a phone.
+
+The WebUI dependency audit reported three high-severity npm advisories; no automatic dependency upgrades were applied.
+
+The workflow's optional issue-comment step received HTTP 410 because Issues are disabled for this repository. This did not affect ActionAgent execution, its successful result, or artifact upload. Enabling Actions write permissions alone does not enable the repository's Issues feature.
