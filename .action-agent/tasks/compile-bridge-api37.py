@@ -32,7 +32,7 @@ import sys
 home = Path(os.environ.get("ANDROID_HOME", "/nonexistent"))
 manager = home / "cmdline-tools/latest/bin/sdkmanager"
 platform = home / "platforms/android-37.0/android.jar"
-build_tools = home / "build-tools/37.0.0"
+build_tools = home / "build-tools/36.0.0"
 if not manager.is_file():
     raise SystemExit(f"sdkmanager missing: {manager}")
 
@@ -54,16 +54,16 @@ def run(label, command, timeout=900):
 print("Install Android 37.0 platform from preview channel 1")
 run("Install SDK 37.0 and Build Tools 37.0.0", [
     manager, "--sdk_root=" + str(home), "--channel=1",
-    "platforms;android-37.0", "build-tools;37.0.0"
+    "platforms;android-37.0", "build-tools;36.0.0"
 ], timeout=900)
 
 if not platform.is_file():
     raise SystemExit(f"SDK platform jar was not installed: {platform}")
 if not (build_tools / "aapt2").is_file() or not (build_tools / "apksigner").is_file():
-    raise SystemExit(f"Build Tools 37.0.0 incomplete: {build_tools}")
+    raise SystemExit(f"Build Tools 36.0.0 incomplete: {build_tools}")
 
 print(f"Android 37 platform installed: {platform.stat().st_size} bytes")
-print(f"Build Tools 37.0.0 installed: {(build_tools / 'apksigner').is_file()}")
+print(f"Build Tools 36.0.0 installed: {(build_tools / 'apksigner').is_file()}")
 print("The Gradle project defaults are used; no compileSdk/targetSdk override is passed.")
 
 run("Compile release Java against the checked-in API 37 configuration", [
