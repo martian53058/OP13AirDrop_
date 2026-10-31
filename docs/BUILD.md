@@ -14,6 +14,7 @@ python3 tools/package-coex.py \
   --snapshot local-inputs/coex/module.tar \
   --bridge oshare/app/build/outputs/apk/release/app-release.apk \
   --installer-base dist/OPAirDrop-v1.0.16.zip \
+  --mosey-apks "local-inputs/mosey/Quick Share extension_1.0.980159239.apks" \
   --mosey-apks "local-inputs/mosey/Quick Share extension_1.0.980159239.apks"
 python3 tools/check-coex.py dist/OPAirDrop-v1.0.23-PJZ110.zip
 ```

@@ -52,6 +52,20 @@ def main():
         for name in ('module.prop', 'README.md', 'CHANGELOG.md'):
             assert not re.search(r'测试版|测试包|实验包|coex-\w*-test\d|## 未发布', (module / name).read_text()), name
         print('PASS stable release identity, update metadata contract and release wording')
+        if build_info.get('mosey_apks_sha256'):
+            original_manifest = dict(reversed(line.split(None, 1)) for line in
+                                     (module / 'APP-SHA256SUMS').read_text().splitlines())
+            assert build_info.get('mosey_apk_sha256') == original_manifest
+            for name, expected in original_manifest.items():
+                apk = module / 'system/system_ext/priv-app/MoseyApp' / name
+                assert hashlib.sha256(apk.read_bytes()).hexdigest() == expected, name
+            callback_manifest = dict(reversed(line.split(None, 1)) for line in
+                                     (module / 'APP-CALLBACK-SHA256SUMS').read_text().splitlines())
+            assert set(callback_manifest) == set(original_manifest)
+            assert callback_manifest['base.apk'] != original_manifest['base.apk']
+            assert all(callback_manifest[name] == original_manifest[name]
+                       for name in original_manifest if name != 'base.apk')
+            print('PASS exact Mosey60715 15-APK set and callback split manifest')
         if build_info.get('share_mode'):
             settings = (module / 'bin/settings.sh').read_text()
             assert 'share-mode)' in settings and 'share_mode_active' in settings
