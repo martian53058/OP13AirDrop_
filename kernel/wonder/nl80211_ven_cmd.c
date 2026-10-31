@@ -264,9 +264,7 @@ static int wonder_vendor_cmd_set_tx_rate_test(struct wiphy *wiphy,
 	wonder_info("Apply TX rate: max_preamble=%u, max_bw=%u, max_nss=%u, max_mcs=%u\n",
 		tx_rate_params.max_preamble, tx_rate_params.max_bw, tx_rate_params.max_nss,
 		tx_rate_params.max_mcs);
-	wondertap_set_tx_rate_mask(&wonder->wondertap_data, &tx_rate_params);
-
-	return 0;
+	return wondertap_set_tx_rate_mask(&wonder->wondertap_data, &tx_rate_params);
 }
 
 static int wonder_vendor_cmd_set_reg(struct wiphy *wiphy,
@@ -308,7 +306,11 @@ static int wonder_vendor_cmd_get_if_mac_addr(struct wiphy *wiphy,
 	struct sk_buff *skb;
 	u8 mac_addr[ETH_ALEN];
 
-	wondertap_get_interface_mac_address(&wonder->wondertap_data, &mac_addr);
+	int ret;
+
+	ret = wondertap_get_interface_mac_address(&wonder->wondertap_data, &mac_addr);
+	if (ret)
+		return ret;
 
 	wonder_info("Handling GET_MAC. Found MAC: %02X:XX:XX:XX:XX:%02X\n",
 		mac_addr[0], mac_addr[5]);
