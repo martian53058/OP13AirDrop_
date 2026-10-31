@@ -10,7 +10,8 @@
 | Magisk | 相同模块布局、Magisk BusyBox、`magisk` 域 | 主机模拟安装与工具调度；未实机验收 |
 | APatch | 相同模块布局、APatch BusyBox、实际 Root 域 | 主机模拟安装与工具调度；未实机验收 |
 | 内置挂载 / Magic Mount / OverlayFS | 检查系统可见文件；无需识别实现名称 | 主机模拟标准及分区搬移布局 |
-| Hybrid Mount | 标准 KernelSU system/ 模块布局；启动后核对有效文件 SHA256；不调用私有 API 或控制优先级 | 代码级检查与主机模拟；Hybrid Mount 实机优先级未验收 |\n| Mountify | 无固定目录检测；尊重挂载端配置 | 主机模拟无需元模块目录；真实 Mountify 待验收 |
+| Hybrid Mount | 标准 KernelSU system/ 模块布局；启动后核对有效文件 SHA256；不调用私有 API 或控制优先级 | 代码级检查与主机模拟；Hybrid Mount 实机优先级未验收 |
+| Mountify | 无固定目录检测；尊重挂载端配置 | 主机模拟无需元模块目录；真实 Mountify 待验收 |
 
 其他实现若提供兼容的模块接口、所需工具和 `ksu` / `magisk` / `su` Root 域，也可使用该路径。无法确定 Root 域时会给出错误；不会向应用域或所有域授予权限。管理器的 Root 权限配置仍须允许驱动加载、Binder、全局挂载及访问模块文件。
 

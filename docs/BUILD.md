@@ -75,9 +75,7 @@ sdkmanager \
 | 目标设备原厂 qca_cld3_peach_v2.ko 与 mac80211.ko | 固定恢复文件 SHA256/Build ID，并在启动及恢复前验证 /vendor/lib/modules 内容 |
 | 目标内核 Module.symvers | 必须来自精确目标内核构建；校验两个 stock 模块及 qca/mac80211/Wonder/provider 四个发行模块的全部导入 CRC |
 | `local-inputs/mosey/mosey_server` | 从原模块提取的 Binder 原生服务，按 ELF64/AArch64/依赖校验后原样装配 |
-| `local-inputs/mosey/libmosey_daemon_ffi.so` | 与原服务配套的 Mosey 无线协议库；仅精确匹配已知 SHA 的构建才应用 peer-grace 指令补丁 |
-| 匹配设备的原厂 WLAN 模块 | 导入接口、导出符号与原厂恢复对照 |
-| 同次内核构建的 `Module.symvers` | 模块 ABI 对照 |
+| `local-inputs/mosey/libmosey_daemon_ffi.so` | 与原服务配套的 Mosey 无线协议库；精确匹配已知源 SHA 时应用补丁，精确匹配已知补丁输出时原样保留，未知构建不修改 |
 
 当前 callback 构建器对应 Mosey60715。原版 APK、splits、`mosey_server` 与 FFI 应从同一套 ColorOS 17.0.0.103 原模块/适配记录取得。将两份原生文件放在表中路径；它们不会提交到 Git，也不会从 stock ROM 查找。打包器会记录 SHA256、ELF build ID、SONAME 与动态依赖。未知 FFI build 保持字节不变，不猜测补丁偏移。`local-inputs/reference-r27/` 保存原平台的参考依赖与文件布局。
 

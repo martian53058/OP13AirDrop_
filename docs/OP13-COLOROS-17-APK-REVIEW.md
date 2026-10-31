@@ -216,7 +216,7 @@ The shared CRC match is useful evidence, not a full ABI proof. The extra 14 impo
 
 The adaptation branch has generic KernelSU integration, not a Hybrid Mount-specific API adapter. customize.sh supplies the standard system/ tree and Mosey REPLACE target. root-runtime.sh selects KSU tools and enters PID 1's mount namespace. The former mount-check.sh only checked binary executability and APK readability; it could accept a different overlay that exposed a readable but wrong file.
 
-The branch now pins the target stock WLAN module SHA256 for recovery, requires exact Module.symvers checks for all stock/custom module imports, and checks the effective Mosey server, FFI and every APK split against SHA256 manifests. This validates the resulting system view but does not configure Hybrid Mount's priority or claim to use its private API.
+The branch now pins the target stock WLAN module SHA256 for recovery, requires exact Module.symvers checks for all stock/custom module imports, and checks the effective Mosey server, FFI and every APK split against SHA256 manifests. This validates the resulting system view but does not configure Hybrid Mount's priority or claim to use its private API. The relevant implementation is in [root-runtime.sh](../blob/adapt/coloros-17-pjz110/module/bin/root-runtime.sh), [mount-check.sh](../blob/adapt/coloros-17-pjz110/module/bin/mount-check.sh), [control.sh](../blob/adapt/coloros-17-pjz110/module/bin/control.sh), and [package-coex.py](../blob/adapt/coloros-17-pjz110/tools/package-coex.py).
 
 ## Current release gate
 

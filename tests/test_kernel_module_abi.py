@@ -13,7 +13,7 @@ from module_abi import compare_shared_imports, inspect, verify_module_imports
 
 
 def make_module(path, build_id, versions):
-    shstr = b"\0.shstrtab\0.note.gnu.build-id\0.modinfo\0.__versions\0"
+    shstr = b"\0.shstrtab\0.note.gnu.build-id\0.modinfo\0__versions\0"
     names = {
         name: shstr.index(name.encode())
         for name in (".shstrtab", ".note.gnu.build-id", ".modinfo", "__versions")
