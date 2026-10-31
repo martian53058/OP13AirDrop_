@@ -31,7 +31,7 @@ class RootRuntime(unittest.TestCase):
         self.env.update(CALLS=str(self.calls), PATH=str(self.system) + ':' + os.environ['PATH'])
         # Prefer the deterministic fixture over a host BusyBox that may expose
         # a real nsenter applet and escape the test's mocked namespace boundary.
-        self.command(self.system / 'busybox', 'if [ "$1" = "--list" ]; then printf "mount\\numount\\n"; else exit 127; fi')
+        self.command(self.system / 'busybox', 'if [ "$1" = "--list" ]; then exit 0; else exit 127; fi')
 
     def command(self, path, code):
         path.parent.mkdir(parents=True, exist_ok=True)
