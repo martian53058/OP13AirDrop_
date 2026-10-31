@@ -16,13 +16,16 @@ python3 tools/package-coex.py \
   --installer-base local-inputs/coex/original-module.zip \
   --mosey-apks "local-inputs/mosey/Quick Share extension_1.0.980159239.apks" \
   --mosey-server local-inputs/mosey/mosey_server \
-  --mosey-ffi local-inputs/mosey/libmosey_daemon_ffi.so
+  --mosey-ffi local-inputs/mosey/libmosey_daemon_ffi.so \
+  --stock-qca local-inputs/device/qca_cld3_peach_v2.ko \
+  --stock-mac local-inputs/device/mac80211.ko \
+  --module-symvers local-inputs/kernel/Module.symvers
 python3 tools/check-coex.py dist/OPAirDrop-v1.0.23-PJZ110.zip
 ```
 
 模块和桥接版本统一读取 `module/module.prop`，装配前校验 release APK 构建元数据、版本、哈希与分享入口能力。输出 ZIP、SHA256，以及 `dist/v<版本>/` 下的正式在线更新元数据；仅生成本地产物，不自动上传或发布。
 
-在 FFI SHA 精确匹配已验证基线时集成有限 peer 过期宽限；其他 FFI build 保留原始二进制。其余功能包括接收宿主并行准备、会话快照唯一归档、实时速度与活动任务计时、流体云进度、接收完成弹窗、自定义接收目录和三种 AirDrop 分享入口。安装升级保留已有共存、范围及性能选择，首次安装默认 Fast；分享入口切换保存后重启生效。
+仅对精确匹配已验证原始 SHA 的 FFI 应用 peer 过期宽限；精确匹配已知补丁输出的 FFI 直接保留，未知构建原样复制。发行包还必须用目标设备原厂 QCA/mac80211 文件及精确内核 Module.symvers 校验全部六个模块的导入 CRC，否则拒绝打包。CRC 通过不等于 KCFI、结构布局或固件运行时兼容已被证明。其余功能包括接收宿主并行准备、会话快照唯一归档、实时速度与活动任务计时、流体云进度、接收完成弹窗、自定义接收目录和三种 AirDrop 分享入口。
 
 检查器在临时目录验证升级偏好保留、首次安装默认配置、冷启动参数，以及 5745 / 5805 / 2447 / 6115 MHz 会话 prepare/restore；另检查桥接版本、来源哈希、Mosey 原生 ELF 身份与依赖、可选的精确 peer 过期补丁、shell 语法和 ZIP 全量校验。主机检查不能替代实机文件收发。
 
@@ -63,11 +66,14 @@ sdkmanager \
 
 ## 2. 本地输入
 
-`local-inputs/` 用于存放从适配设备和对应系统版本取得的构建输入。若保留了 ColorOS 17.0.0.103 原始模块 ZIP，可将同一 ZIP 同时传给 `--snapshot` 和 `--installer-base`；打包器现已支持从原始模块 ZIP 安全重建快照。若没有原始 ZIP，则需提供旧格式 `module.tar` 与对应 installer-base ZIP。模块装配使用以下文件：
+`local-inputs/` 用于存放从适配设备和对应系统版本取得的构建输入。参考模块 ZIP 可同时作为 `--snapshot` 和 `--installer-base`，但它不是目标设备基线；打包器会强制要求目标原厂 WLAN 模块及精确目标内核 Module.symvers，任何导入符号缺失或 CRC 不匹配都会中止发行包生成。ZIP 快照仍会逐文件校验 SHA256、CRC 和安全路径。模块装配使用以下文件：
 
 | 输入 | 用途 |
 | --- | --- |
-| ColorOS 17.0.0.103 原始模块 ZIP（建议） | 同时作为 `--snapshot` 与 `--installer-base`，提供已验证的原生驱动、VINTF、权限策略、安装脚本和快照清单 |\n| 原版 Mosey60715 APKS bundle（base.apk + 全部 splits） | 系统包扫描、provider 认证和回调 APK 构建基线；打包时校验全部 15 个 APK 的 SHA256 |
+| 其他设备的参考模块 ZIP | 仅作为待审计快照/安装器基线；其设备声明不能代替目标设备 ABI 校验 |
+| 原版 Mosey60715 APKS bundle（base.apk + 全部 splits） | 系统包扫描、provider 认证和回调 APK 构建基线；打包时校验全部 15 个 APK 的 SHA256 |
+| 目标设备原厂 qca_cld3_peach_v2.ko 与 mac80211.ko | 固定恢复文件 SHA256/Build ID，并在启动及恢复前验证 /vendor/lib/modules 内容 |
+| 目标内核 Module.symvers | 必须来自精确目标内核构建；校验两个 stock 模块及 qca/mac80211/Wonder/provider 四个发行模块的全部导入 CRC |
 | `local-inputs/mosey/mosey_server` | 从原模块提取的 Binder 原生服务，按 ELF64/AArch64/依赖校验后原样装配 |
 | `local-inputs/mosey/libmosey_daemon_ffi.so` | 与原服务配套的 Mosey 无线协议库；仅精确匹配已知 SHA 的构建才应用 peer-grace 指令补丁 |
 | 匹配设备的原厂 WLAN 模块 | 导入接口、导出符号与原厂恢复对照 |

@@ -10,7 +10,7 @@
 | Magisk | 相同模块布局、Magisk BusyBox、`magisk` 域 | 主机模拟安装与工具调度；未实机验收 |
 | APatch | 相同模块布局、APatch BusyBox、实际 Root 域 | 主机模拟安装与工具调度；未实机验收 |
 | 内置挂载 / Magic Mount / OverlayFS | 检查系统可见文件；无需识别实现名称 | 主机模拟标准及分区搬移布局 |
-| Mountify | 无固定目录检测；尊重挂载端配置 | 主机模拟无需元模块目录；真实 Mountify 待验收 |
+| Hybrid Mount | 标准 KernelSU system/ 模块布局；启动后核对有效文件 SHA256；不调用私有 API 或控制优先级 | 代码级检查与主机模拟；Hybrid Mount 实机优先级未验收 |\n| Mountify | 无固定目录检测；尊重挂载端配置 | 主机模拟无需元模块目录；真实 Mountify 待验收 |
 
 其他实现若提供兼容的模块接口、所需工具和 `ksu` / `magisk` / `su` Root 域，也可使用该路径。无法确定 Root 域时会给出错误；不会向应用域或所有域授予权限。管理器的 Root 权限配置仍须允许驱动加载、Binder、全局挂载及访问模块文件。
 
@@ -24,11 +24,17 @@
 
 `bin/mount-check.sh` 在驱动和 Wi-Fi 修改前确认：
 
-- Mosey 原生服务可执行，服务库和全部 APK split 可读。
+- Mosey 服务、FFI 和全部 APK split 的有效系统视图 SHA256 与包内清单完全一致，不只检查文件存在或可读。
 - 权限、默认权限、hidden API 和 VINTF XML 与模块配置一致。
 - 同时接受 `system/system_ext`、`system/product` 与安装器搬移后的 `system_ext`、`product` 来源布局。
 
 检查不依赖挂载类型或元模块 ID，也不要求 OverlayFS 在 mountinfo 中出现特定字符串。它不代替现有 APK 摘要、驱动身份与服务运行状态检查。
+
+## KernelSU + Hybrid Mount 的验证边界
+
+仓库没有调用 Hybrid Mount 私有 API、读取其优先级配置或按其内部元模块 ID 安装文件。customize.sh 提供标准 KernelSU 模块目录和 Mosey REPLACE 目标；root-runtime.sh 只负责选择 Root 工具并进入 PID 1 挂载命名空间。实际是否由 Hybrid Mount 把 system/ 内容呈现在系统视图，必须以启动后的有效文件为准。
+
+mount-check.sh 会把系统可见的 Mosey 服务、FFI 和每个 APK split 与包内 SHA256 清单逐一比较。它可以发现其他 overlay 抢占、错误版本或缺失文件，但不能替 Hybrid Mount 选择模块或调整优先级。没有 Hybrid Mount 的实际配置文件或源码时，不声称已验证其优先级行为。
 
 ## Mountify 排查
 
