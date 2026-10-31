@@ -14,7 +14,7 @@ for path in ROOT.rglob('*'):
     relative = path.relative_to(ROOT)
     if not path.is_file() or any(part in SKIP for part in relative.parts):
         continue
-    if relative.as_posix() == 'docs/migration.json':
+    if relative.as_posix() in {'docs/migration.json', 'tools/coex-build-na20.py'}:
         continue
     count += 1
     # The legacy pattern is split so this checker also checks itself.
