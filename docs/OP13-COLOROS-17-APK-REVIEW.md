@@ -51,71 +51,95 @@ The source has been updated to accept exactly these two known filter contracts w
 
 Static DEX inspection is not equivalent to running DexKit against the APK on Android. The exact APK has not yet been passed through the Android DexKit harness, and OShare hooks have not been runtime-tested on the phone.
 
-## Mosey 60715 bundle
+## Mosey 60715 bundle and 15-split adaptation
 
-The APKS archive contains 15 APKs: one base plus 14 splits. Its base APK has SHA256:
+The owner confirmed that `Quick Share extension_1.0.980159239.apks` was exported from the phone while no module was active. The archive contains 15 APKs (one base plus 14 configuration/ABI splits).
 
-`7ab2deaea6c9c2bdd5ba0f935d6143c115f5ceb11cb8b63066496ad27a28da49`
+- Base APK SHA256: `7ab2deaea6c9c2bdd5ba0f935d6143c115f5ceb11cb8b63066496ad27a28da49`.
+- This exactly matches `BASE_SHA` in `mosey/callback/build.py`.
+- All 14 split hashes were verified against the uploaded archive and added to `module/APP-SHA256SUMS`.
 
-This is exactly the `BASE_SHA` pinned by `mosey/callback/build.py` and the `base.apk` hash currently in `module/APP-SHA256SUMS`.
+The earlier live-package hash `54dd7fb3...` differs from the clean archive base. It was obtained at a different time/view; a previously mounted callback APK is one possible explanation, but that cannot be proven from the hash alone. The clean 7ab2 archive is now the callback source of truth. The callback builder's SHA and Smali checks remain enabled.
 
-The 14 split APK hashes match the earlier device-provided SHA256 output, including the nine additional configuration splits not present in the repository's six-entry `APP-SHA256SUMS` manifest. The extra splits are resource configuration APKs; the arm64 split carries `liblivephoto_puller_jni.so`.
+The six-entry split-count assumption has been removed from the packaging path by making the target's full 15-APK set explicit:
 
-There is still a material base-APK discrepancy:
+- `tools/mosey_apks.py` validates the archive's exact APK basename set and every SHA256 before staging files.
+- `tools/package-coex.py` now requires `--mosey-apks`, stages all 15 original APKs under `system/system_ext/priv-app/MoseyApp`, and extends `APP-CALLBACK-SHA256SUMS` with the 14 unchanged split hashes while preserving the patched base hash.
+- `tools/check-coex.py` checks the original and callback manifests against the staged APKs.
+- Six new host tests cover extraction, stale split removal, missing/extra/duplicate APKs, hash mismatch, and callback-manifest extension.
 
-- Supplied APKS bundle base: `7ab2de...`
-- Earlier installed active `/data/app/.../base.apk` hash from the owner's output: `54dd7fb3...`
+This fixes the repository's known six-versus-fifteen split packaging mismatch. It does not by itself prove that the callback patch runs correctly inside Mosey on Android.
 
-The repository's `app-check.sh` requires the active split count to equal the six entries in `APP-SHA256SUMS`, so it rejects the reported 15-path active package. More importantly, the callback builder is pinned to the supplied 7ab2de base and exact smali hashes. Do not merely replace `BASE_SHA` or remove those checks.
+## Uploaded WLAN module analysis
 
-The next required input is the exact installed active Mosey `base.apk` from the path previously shown by the owner:
+The two uploaded files match the paths previously reported under `/vendor/lib/modules`. They are valid ARM64 ELF relocatable kernel modules with modversion CRC sections.
 
-`/data/app/~~IzXVk4J4Z4S-Z2wiugm9-Q==/com.google.android.mosey-K5m8Rt5i9Gi_S1sVMQd4iw==/base.apk`
+| Module | Size | `vermagic` | GNU build ID | Imported CRC records |
+|---|---:|---|---|---:|
+| `qca_cld3_peach_v2.ko` | 19,736,456 bytes | `6.6.118-android15-8-o-4k` | `ec9df3687e6f223b8a92eeaa7f188ef526255f2c` | 588 |
+| `mac80211.ko` | 1,963,888 bytes | `6.6.118-android15-8-o-g1524d9b076be-4k` | `6bba56348fcdd70c10131c7da6cb1f71fb1bd8ab` | 317 |
 
-Copy that file with a root-capable file manager and upload it. No command or diagnostic script is needed. The supplied APKS base can serve as the known 7ab2de reference; after receiving the active base, compare its DEX payload with that reference before choosing whether one patched base can safely serve both the system and active APK mount points or whether two patched payloads are required.
+The two modules have 173 shared symbol-version entries, and all 173 CRCs agree. Their modversion flags are also the same: `SMP preempt mod_unload modversions aarch64`.
 
-The system image APK at `/system_ext/priv-app/MoseyApp/base.apk` should also be copied if it is not byte-identical to the supplied 7ab2de base. This avoids assuming the system and active package bases are the same build.
+Their embedded release prefixes differ from the phone's reported `uname -r`, but this alone is not a rejection condition for a modversions-enabled module. In the public OnePlus SM8750 common-kernel source, `same_magic()` skips the release prefix when CRCs are present and compares the remaining vermagic flags; the loader then checks imported symbol CRCs against the running kernel. This behavior is visible in the official source branch for PJZ110 15.0.0.851:
+
+- [OnePlus common-kernel module/version.c](https://github.com/OnePlusOSS/android_kernel_common_oneplus_sm8750/blob/oneplus/sm8750_v_15.0.0_oneplus_13/kernel/module/version.c)
+- [PJZ110 15.0.0.851 common-kernel commit](https://github.com/OnePlusOSS/android_kernel_common_oneplus_sm8750/commit/9920459dfb0080dd8a81c41d95701483857f804a)
+
+This is useful ABI evidence, but it is not a substitute for the target kernel's own `Module.symvers`. The 173 shared CRCs only establish agreement between the two uploaded modules, not agreement with the running kernel's full export table.
+
+The uploaded module build IDs also differ from the stock-module IDs recorded in the old repository snapshot:
+
+- Old snapshot QCA ID: `f9b56d574a80d18b2b93f44817ac44ddd4753f24`.
+- Uploaded QCA ID: `ec9df3687e6f223b8a92eeaa7f188ef526255f2c`.
+- Old snapshot mac80211 ID: `06b950ed78a4206dd03433f563067448057b4925`.
+- Uploaded mac80211 ID: `6bba56348fcdd70c10131c7da6cb1f71fb1bd8ab`.
+
+Therefore the old captured kernel payload must not be assumed to be a bit-for-bit match for this phone. The uploaded original modules are useful target references; rebuilding the custom Wonder/WLAN modules still requires the exact kernel build inputs and ABI comparison.
 
 ## Kernel source status
 
-The official OnePlusOSS SM8750 kernel modules/device-tree repository currently exposes the Android 16 / 16.0.9.401 branch, not a verified source snapshot for the reported ColorOS 17.0.0.103 fingerprint. The common-kernel repository likewise does not currently provide a confirmed matching .103 branch in its public branch list.
+The public official OnePlus source I could verify includes:
 
-- [Official OnePlusOSS SM8750 modules and device tree](https://github.com/OnePlusOSS/android_kernel_modules_and_devicetree_oneplus_sm8750)
-- [Official OnePlusOSS SM8750 common kernel](https://github.com/OnePlusOSS/android_kernel_common_oneplus_sm8750)
+- [SM8750 common kernel, PJZ110 15.0.0.851 branch](https://github.com/OnePlusOSS/android_kernel_common_oneplus_sm8750/tree/oneplus/sm8750_v_15.0.0_oneplus_13).
+- [SM8750 modules/device-tree, PJZ110 15.0.0.851 branch](https://github.com/OnePlusOSS/android_kernel_modules_and_devicetree_oneplus_sm8750/tree/oneplus/sm8750_v_15.0.0_oneplus_13).
+- [SM8750 Android 16 / OnePlus 13 branch](https://github.com/OnePlusOSS/android_kernel_common_oneplus_sm8750/tree/oneplus/sm8750_b_16.0.0_oneplus_13).
 
-The .401 tree is a useful nearby reference for the 6.6.118 family, but it must not be represented as an exact match for the owner's `V.487427a-2227f32-224bc4c` build. Before rebuilding or replacing WLAN modules, obtain the target device's original modules and compare their vermagic, symbol CRCs, exported symbols, and ABI against the build inputs.
+The PJZ110 15.0.0.851 source is a useful device-specific reference; the Android 16 branch is a newer nearby reference. Neither has been verified as the exact source for the reported ColorOS 17.0.0.103 build fingerprint `V.487427a-2227f32-224bc4c` and kernel release `6.6.118-android15-8-g9bc34d5b0c79-abogki537459655-4k`. I will not silently substitute either branch for the exact .103 source.
 
-## Next required files
+## Remaining required inputs
 
-Please copy these files with a root-capable file manager and upload them here:
+Already received:
 
-1. Active Mosey base APK:
-   `/data/app/~~IzXVk4J4Z4S-Z2wiugm9-Q==/com.google.android.mosey-K5m8Rt5i9Gi_S1sVMQd4iw==/base.apk`
-2. System Mosey base APK, only if it differs from the supplied APKS base:
-   `/system_ext/priv-app/MoseyApp/base.apk`
-3. Original WLAN modules:
-   `/vendor/lib/modules/qca_cld3_peach_v2.ko`
-   `/vendor/lib/modules/mac80211.ko`
-4. Mosey native service files:
-   `/system_ext/bin/mosey_server`
-   `/system_ext/lib64/libmosey_daemon_ffi.so`
+- Clean Mosey60715 APKS bundle with all 15 APKs.
+- OShare 17.2.45 APK.
+- Original `qca_cld3_peach_v2.ko`.
+- Original `mac80211.ko`.
 
-If the exact .103 kernel source archive is available, also provide its matching `.config` and `Module.symvers`. The official .401 source is not a substitute for those exact build artifacts.
+Still needed:
+
+1. `/system_ext/bin/mosey_server`.
+2. `/system_ext/lib64/libmosey_daemon_ffi.so`.
+3. The exact .103 kernel source branch/archive and its matching generated `.config` and `Module.symvers`.
+
+For the two Mosey native files, use a root-capable file manager and navigate directly to the paths above. If the file manager cannot see `/system_ext`, try its equivalent `/system/system_ext` path or search the root filesystem for the exact filenames. These files are proprietary system components and are not part of the public kernel source.
+
+`.config` may be available as `/proc/config.gz` if the kernel exposes IKCONFIG_PROC; this is a file to copy, not a command to run. `Module.symvers` is normally generated in the kernel build directory and is not usually installed on the phone. If you do not have it, provide the exact source URL/branch and build configuration, or the matching firmware's kernel build artifacts. The old snapshot archive `local-inputs/coex/module.tar` and installer base ZIP are also not present in the public repository; upload them if you still have those local build inputs.
 
 ## Current status
 
-- OShare 17.2.45: static anchors inspected; chooser filter signature adaptation committed.
-- Mosey: supplied bundle base matches the repository's old callback input, but not the active base hash previously reported by the owner.
-- Kernel: two source-level Wonder fixes and preflight/rollback guards are committed on the adaptation branch; target ABI has not been verified.
+- OShare 17.2.45: static DEX anchors inspected; the chooser resolver now supports the exact `List, boolean` filter contract as well as the older `List` contract.
+- Mosey60715: clean base matches the callback builder; all 15 APK hashes are now recorded and the package builder accepts the complete APKS archive.
+- WLAN: both original modules inspected; 173 shared CRCs agree, but target-kernel CRC verification remains outstanding.
+- Kernel source: two Wonder source defects and WLAN rollback preflight guards are fixed on the adaptation branch; custom modules have not been rebuilt for .103.
 - Device: untouched. No module has been installed, flashed, or tested on the phone.
-
 
 ## Host validation completed
 
-ActionAgent run [41202312350](https://github.com/martian53058/OP13AirDrop_/actions/runs/41202312350) completed successfully on 2026-10-31.
+ActionAgent run [41205930830](https://github.com/martian53058/OP13AirDrop_/actions/runs/41205930830) completed successfully on 2026-10-31.
 
 - Repository/static checks passed (345 files).
-- All 153 Python tests passed.
+- All 159 Python tests passed, including six new Mosey APKS packaging tests.
 - `oshare/tests/run.sh` passed all resolver-adjacent, send, receive, chooser, callback, and state-machine regressions.
 - WebUI dependency install, API tests, refresh tests, TypeScript check, and Vite production build passed.
 - The LSPosed helper JAR built successfully.
@@ -125,4 +149,4 @@ The app's checked-in defaults remain compile SDK 37 and target SDK 37. The CI ru
 
 The WebUI dependency audit reported three high-severity npm advisories; no automatic dependency upgrades were applied.
 
-The workflow's optional issue-comment step received HTTP 410 because Issues are disabled for this repository. This did not affect ActionAgent execution, its successful result, or artifact upload. Enabling Actions write permissions alone does not enable the repository's Issues feature.
+The workflow's optional issue-comment step received HTTP 410 because Issues are disabled for this repository. This did not affect ActionAgent execution, its successful result, or artifact upload.
