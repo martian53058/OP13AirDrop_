@@ -21,6 +21,8 @@ class CompatibilityTests(unittest.TestCase):
         self.bin.mkdir(parents=True)
         self.vendor = self.base / 'vendor'
         self.vendor.mkdir()
+        for name in ('qca_cld3_peach_v2.ko', 'mac80211.ko'):
+            (self.vendor / name).write_bytes(b'stock module fixture')
         self.tools = self.base / 'tools'
         self.tools.mkdir()
         self.props = self.base / 'props'
@@ -36,6 +38,7 @@ class CompatibilityTests(unittest.TestCase):
             'ro.product.manufacturer': 'OnePlus', 'ro.product.brand': 'OnePlus',
             'ro.soc.model': 'SM8750', 'ro.board.platform': 'sun',
             'ro.build.version.sdk': '37', 'kernel': KERNEL, 'uid': '0',
+            'init.svc.vendor.wifi_hal_legacy': 'running',
         }.items():
             self.prop(key, value)
         for name, body in {
@@ -67,6 +70,7 @@ module_note() {{ cat '{self.live}/'$1 2>/dev/null; }}
         (self.bin / 'transfer-power.sh').write_text('')
         (self.bin / 'transfer-idle.sh').write_text(f'touch "{self.marker}"; exit 88\n')
         control = (ROOT / 'module/bin/control.sh').read_text().replace('/system/bin/sh', '/bin/sh')
+        control = control.replace('/vendor/lib/modules', str(self.vendor))
         (self.bin / 'control.sh').write_text(control)
         # Run the production installer up to the first configuration mutation.
         installer = (ROOT / 'module/customize.sh').read_text().split('# Replacement must not merge', 1)[0]
@@ -157,18 +161,30 @@ module_note() {{ cat '{self.live}/'$1 2>/dev/null; }}
                 result = self.start()
                 self.assertEqual(result.returncode, 88, result.stderr)
 
-    def test_model_soc_sdk_and_stock_files_do_not_restrict_admission(self):
+    def test_model_soc_and_sdk_do_not_restrict_install_admission(self):
         for sdk, soc in [('36', 'SM8750-AB'), ('35', 'other'), ('', '')]:
             with self.subTest(sdk=sdk, soc=soc):
                 self.prop('ro.product.model', 'UNLISTED_MODEL')
                 self.prop('ro.build.version.sdk', sdk)
                 self.prop('ro.soc.model', soc)
-                # No original module files or recorded stock build identities.
+                # Device identity remains broad; runtime rollback prerequisites are
+                # checked separately before any driver mutation.
                 (self.bin / 'kernel-identity.sh').write_text('')
                 result = self.install()
                 self.assertEqual(result.returncode, 0, result.stderr)
-                result = self.start()
-                self.assertEqual(result.returncode, 88, result.stderr)
+
+    def test_missing_stock_restore_module_rejects_before_driver_changes(self):
+        (self.vendor / 'qca_cld3_peach_v2.ko').unlink()
+        result = self.start()
+        self.assert_rejected(result, 'Recovery prerequisite missing')
+        self.assertIn('qca_cld3_peach_v2.ko', result.stderr)
+        self.assertFalse(self.marker.exists())
+
+    def test_unknown_wifi_hal_state_rejects_before_driver_changes(self):
+        self.prop('init.svc.vendor.wifi_hal_legacy', 'starting')
+        result = self.start()
+        self.assert_rejected(result, 'Wi-Fi HAL state is not recoverable')
+        self.assertFalse(self.marker.exists())
 
     def test_unknown_original_build_is_allowed_during_restore(self):
         code = (self.bin / 'control.sh').read_text().split('case "${1:-status}"', 1)[0]
