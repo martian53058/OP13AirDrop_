@@ -173,6 +173,7 @@ else:
    (proc/'cmdline').write_bytes(b'/system/bin/sh\0'+str(module/'bin/speed-history.sh').encode()+b'\0run\0')
    common=(HERE.parent/'module/bin/common.sh').read_text().replace('STATE=/data/adb/opairshare',f'STATE={state}').replace('/proc/',str(b/'proc')+'/')
    (module/'bin/common.sh').write_text(common)
+   (module/'bin/transfer-power.sh').write_text('performance_restore() { :; }\nperformance_tick() { :; }\n')
    script=(HERE.parent/'module/bin/speed-history.sh').read_text()
    script=script.replace('/system/bin/sh "$MODDIR/bin/speed-history.sh" run >> "$D/worker.log" 2>&1 < /dev/null &','echo unexpected_worker_launch >&2; exit 1')
    p=module/'bin/speed-history.sh';p.write_text(script)
