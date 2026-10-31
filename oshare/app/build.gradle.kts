@@ -19,7 +19,7 @@ android {
     defaultConfig {
         applicationId = "com.tlsu.oshareairdrop"
         minSdk = 35
-        targetSdk = 37
+        targetSdk = providers.gradleProperty("opairshareTargetSdk").orNull?.toInt() ?: 37
         versionCode = providers.gradleProperty("opairshareVersionCode").orNull?.toInt()
             ?: moduleProperties.getProperty("versionCode").toInt()
         versionName = providers.gradleProperty("opairshareVersionName").orNull

@@ -1,5 +1,5 @@
 """
-run = false
+run = true
 name = "ColorOS 17 adaptation regression suite"
 reason = "Validate source-level adaptation changes without connecting to or modifying a phone"
 timeout = 1800
@@ -15,7 +15,7 @@ run = [
   "node tests/test-api.mjs",
   "node tests/test-webui-refresh.mjs",
   "cd webui && npm run check && npm run build",
-  "cd oshare && ./gradlew -PopairshareCompileSdk=36 :app:compileDebugJavaWithJavac --no-daemon"
+  "cd oshare && ./gradlew -PopairshareCompileSdk=36 -PopairshareTargetSdk=36 :app:compileDebugJavaWithJavac --no-daemon"
 
 ]
 after = []
