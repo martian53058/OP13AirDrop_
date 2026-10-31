@@ -15,7 +15,7 @@ run = [
   "node tests/test-api.mjs",
   "node tests/test-webui-refresh.mjs",
   "cd webui && npm run check && npm run build",
-  "cd oshare && ./gradlew :app:compileDebugJavaWithJavac --no-daemon"
+  "cd oshare && ./gradlew -PopairshareCompileSdk=36 :app:compileDebugJavaWithJavac --no-daemon"
 
 ]
 after = []
