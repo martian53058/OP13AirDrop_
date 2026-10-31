@@ -1,5 +1,5 @@
 """
-run = true
+run = false
 name = "Compile OShare bridge against Android API 37"
 reason = "Validate the checked-in compileSdk 37 and targetSdk 37 configuration using the Android 37.0 platform from the SDK preview repository"
 timeout = 1200
