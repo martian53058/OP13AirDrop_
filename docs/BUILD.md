@@ -35,7 +35,7 @@ python3 tools/check-coex.py dist/OPAirDrop-v1.0.23-PJZ110.zip
 | --- | --- |
 | 通用工具 | Git、Python 3.10+ |
 | WebUI | Node.js 24、npm；依赖版本由 `webui/package-lock.json` 固定 |
-| Android 桥接 | JDK 17、Android SDK Platform 37、Gradle 8.13、AGP 8.13.2 |
+| Android 桥接 | JDK 17、Android SDK Platform 37、Gradle 9.3.1、AGP 9.1.1 |
 | 原生助手 | Android SDK Platform 36、Build Tools 36.0.0、NDK 28.2.13676358、JDK 17 |
 | Mosey APK 构建 | Apktool、JDK 17、Android SDK Platform 36、Build Tools 36.0.0 |
 | 内核 | Linux x86_64、ext4 构建卷、官方平台源码与随源码提供的工具链 |
@@ -137,7 +137,7 @@ cd "$OPAIRSHARE_REPO"
 oshare/app/build/outputs/apk/release/app-release.apk
 ```
 
-Gradle wrapper 使用 8.13，Android Gradle Plugin 使用 8.13.2。依赖仓库配置在 `oshare/settings.gradle.kts`，应用 ID 为 `com.tlsu.oshareairdrop`。 OShare 动态定位依赖固定为 `org.luckypray:dexkit:2.3.0`，Kotlin 标准库固定为 `2.2.21`；native 库随 APK 打包。匹配规则位于 `oshare/app/src/main/java/com/tlsu/oshareairdrop/OShareDexResolver.java`，指定 APK 的离线验证入口为 `oshare/tests/run-dexkit-android.sh`。
+Gradle wrapper 使用 9.3.1，Android Gradle Plugin 使用 9.1.1；该组合支持 Android API 37.0。依赖仓库配置在 `oshare/settings.gradle.kts`，应用 ID 为 `com.tlsu.oshareairdrop`。 OShare 动态定位依赖固定为 `org.luckypray:dexkit:2.3.0`，Kotlin 标准库固定为 `2.2.21`；native 库随 APK 打包。匹配规则位于 `oshare/app/src/main/java/com/tlsu/oshareairdrop/OShareDexResolver.java`，指定 APK 的离线验证入口为 `oshare/tests/run-dexkit-android.sh`。
 
 release 关闭调试，保留反射及 DexKit 所需代码。debug 和 release 均使用与 OplusCameraPro 相同的自有签名，通过未入库的 `oshare/local.properties` 或环境变量提供 `KEYSTORE_PATH`、`KEYSTORE_PASS`、`KEY_ALIAS`、`KEY_PASSWORD`；密钥库位于项目外，缺少配置时不会回退到 Debug 签名。此前 Debug 签名的桥接需要先手动卸载，才能安装新签名版本。OShare 的版本名、版本码从 `module/module.prop` 读取，打包工具核对 release 元数据后才复制 APK。调试设备测试需要先单独执行 `./gradlew :app:assembleDebug`。
 
