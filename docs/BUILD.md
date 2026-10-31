@@ -4,7 +4,7 @@
 
 ## 正式发行包
 
-`tools/package-coex.py` 使用已校验的实机自动共存栈和当前源码构建的 OShare 桥接、WebUI，生成正式模块。发行包保留 mode3 驱动、Mosey 自动共存策略、对应 build ID，以及 2.4 / 5 / 6 GHz 下所选的 Fast 配置。内核和 Mosey APK 来自归档快照，不由当前源码重新编译；输入哈希和脚本覆盖记录位于包内 `build-info.json`。
+`tools/package-coex.py` 使用已校验的实机自动共存栈和当前源码构建的 OShare 桥接、WebUI，生成正式模块。发行包保留 mode3 驱动、Mosey 自动共存策略、对应 build ID，以及 2.4 / 5 / 6 GHz 下所选的 Fast 配置。内核栈来自已校验的实机快照；Mosey APK、`mosey_server` 与 FFI 使用显式本地输入并逐项校验，不由当前源码重新编译；输入哈希和脚本覆盖记录位于包内 `build-info.json`。
 
 ```sh
 python3 tools/build-native.py --sdk "$ANDROID_HOME" --ndk "$ANDROID_NDK_HOME"

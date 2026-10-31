@@ -165,3 +165,16 @@ Both are ELF64, little-endian, AArch64, ET_DYN. The server depends on `libbinder
 The FFI `.comment` identifies Android Clang 21.0.0 and Rust 1.95 nightly. Its SHA does **not** match the repository's older peer-grace patch input SHA `7de30b96...`. Therefore this uploaded FFI must be copied unchanged. The package builder now applies the old one-instruction peer-grace patch only when the source SHA exactly matches its hard-coded guard; it does not alter an unknown FFI build.
 
 The exact input files have not been runtime-tested on the target phone, and their firmware provenance is based on the owner's identification as files extracted from the original module. The build records both hashes and ELF metadata for later audit.
+
+## Runtime-input packaging validation
+
+ActionAgent run [41213115178](https://github.com/martian53058/OP13AirDrop_/actions/runs/41213115178) completed successfully after adding the explicit server/FFI inputs and ELF validation.
+
+- Repository/source checks passed across 349 files.
+- All 166 Python tests passed, including seven new ELF inspection and runtime-staging tests.
+- OShare regression suite passed.
+- WebUI API tests, refresh tests, TypeScript check and production build passed.
+- Android Java compilation passed with JDK 17 and the validation-only SDK 36 / target 36 override.
+- The supplied binary files themselves were independently inspected with the same ELF metadata fields used by the new packager; their dependencies and build IDs match the recorded values.
+
+The full release packager was not run because the original local snapshot archive, installer-base ZIP and signed release bridge APK are not present in the repository. The two proprietary binaries remain local inputs and were not uploaded to GitHub. No device operation was performed.

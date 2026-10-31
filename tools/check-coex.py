@@ -104,7 +104,10 @@ def main():
                 actual = inspect_elf(module / expected_path)
                 for key in ('size', 'sha256', 'elf_class', 'endianness',
                             'e_type', 'e_machine', 'build_id', 'soname', 'needed'):
-                    assert actual[key] == expected[key], f'{role}: {key}'
+                    expected_value = (expected['output_sha256']
+                                      if role == 'ffi' and key == 'sha256'
+                                      else expected[key])
+                    assert actual[key] == expected_value, f'{role}: {key}'
             ffi_path = module / runtime['ffi']['path']
             assert hashlib.sha256(ffi_path.read_bytes()).hexdigest() == runtime['ffi']['output_sha256']
             if build_info.get('stability_patch'):
