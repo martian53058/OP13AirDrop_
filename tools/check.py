@@ -7,7 +7,7 @@ import re
 import subprocess
 
 ROOT = Path(__file__).resolve().parents[1]
-SKIP = {'.git', '.claude', 'node_modules', 'dist', 'build', '.gradle', '__pycache__', 'local-inputs'}
+SKIP = {'.git', '.claude', '.action-agent', 'node_modules', 'dist', 'build', '.gradle', '__pycache__', 'local-inputs'}
 errors = []
 count = 0
 for path in ROOT.rglob('*'):
