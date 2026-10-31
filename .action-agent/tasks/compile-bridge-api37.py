@@ -1,5 +1,5 @@
 """
-run = false
+run = true
 name = "Compile OShare bridge against Android API 37"
 reason = "Validate the checked-in compileSdk 37 and targetSdk 37 configuration using the Android 37.0 platform from the SDK preview repository"
 timeout = 1200
@@ -52,7 +52,7 @@ def run(label, command, timeout=900):
         raise SystemExit(result.returncode)
 
 print("Install Android 37.0 platform from preview channel 1")
-run("Install SDK 37.0 and Build Tools 37.0.0", [
+run("Install SDK 37.0 and Build Tools 36.0.0", [
     manager, "--sdk_root=" + str(home), "--channel=1",
     "platforms;android-37.0", "build-tools;36.0.0"
 ], timeout=900)
