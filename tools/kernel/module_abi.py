@@ -42,6 +42,12 @@ def inspect(path):
         if b"=" in entry:
             key, value = entry.decode(errors="replace").split("=", 1)
             modinfo.setdefault(key, []).append(value)
+    build_id = None
+    for section in sections:
+        if section[1] == 7:  # SHT_NOTE
+            build_id = note_build_id(payload(section))
+            if build_id:
+                break
     versions = {}
     if "__versions" in named:
         raw = payload(named["__versions"])
@@ -85,7 +91,7 @@ def inspect(path):
             if name.startswith("__ksymtab_"):
                 exports.append(name.removeprefix("__ksymtab_"))
     return {"file": str(Path(path).resolve()), "sha256": hashlib.sha256(data).hexdigest(),
-            "modinfo": modinfo, "versions": versions,
+            "build_id": build_id, "modinfo": modinfo, "versions": versions,
             "undefined": sorted(set(undefined)), "exports": sorted(set(exports)),
             "signature_trailer_present": data.endswith(b"~Module signature appended~\n")}
 
@@ -124,6 +130,69 @@ def symvers(paths):
     if not result:
         raise ValueError("empty Module.symvers")
     return result
+
+
+
+def note_build_id(raw):
+    """Read a GNU build-id from an ELF SHT_NOTE payload."""
+    offset = 0
+    while offset + 12 <= len(raw):
+        namesz, descsz, note_type = struct.unpack_from("<III", raw, offset)
+        name_start = offset + 12
+        name_end = name_start + namesz
+        desc_start = (name_end + 3) & ~3
+        desc_end = desc_start + descsz
+        next_note = (desc_end + 3) & ~3
+        if next_note > len(raw):
+            break
+        name = raw[name_start:name_end].rstrip(b"\0")
+        if name == b"GNU" and note_type == 3:
+            return raw[desc_start:desc_end].hex()
+        offset = next_note
+    return None
+
+
+def compare_shared_imports(left_path, right_path):
+    """Compare CRCs shared by two modules; this is not a full kernel ABI check."""
+    left = inspect(left_path)
+    right = inspect(right_path)
+    a, b = left["versions"], right["versions"]
+    common = set(a) & set(b)
+    mismatches = {name: {"left": a[name], "right": b[name]}
+                  for name in sorted(common) if a[name] != b[name]}
+    return {
+        "left_sha256": left["sha256"],
+        "right_sha256": right["sha256"],
+        "common_symbols": len(common),
+        "mismatches": mismatches,
+        "left_only": sorted(set(a) - set(b)),
+        "right_only": sorted(set(b) - set(a)),
+        "status": "CRC_MISMATCH" if mismatches else "SHARED_CRC_MATCH_ONLY",
+    }
+
+
+def verify_module_imports(module_path, symvers_paths):
+    """Check every recorded module import against the supplied kernel Module.symvers."""
+    module = inspect(module_path)
+    exports = symvers(symvers_paths)
+    imports = module["versions"]
+    mismatches = {
+        name: {"module": crc, "symvers": exports[name]}
+        for name, crc in sorted(imports.items())
+        if name in exports and exports[name] != crc
+    }
+    missing = sorted(set(imports) - set(exports))
+    return {
+        "file": module["file"],
+        "sha256": module["sha256"],
+        "build_id": module["build_id"],
+        "imported_symbols": len(imports),
+        "matched": sum(exports.get(name) == crc for name, crc in imports.items()),
+        "mismatches": mismatches,
+        "missing": missing,
+        "status": "FAIL" if mismatches else "INCOMPLETE" if missing else "CRC_MATCH_ONLY",
+        "limitations": "CRC match does not prove struct layout, KCFI, GKI access, provider binding or firmware behavior.",
+    }
 
 
 def main():
