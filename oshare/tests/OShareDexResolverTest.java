@@ -55,7 +55,9 @@ public final class OShareDexResolverTest {
                         ClassLoader.getSystemClassLoader().getParent()));
                 OShareChooserResolver.Roles chooser = new OShareChooserResolver.Roles(chooserRoles,
                         bound.deviceConstructor.getDeclaringClass().getClassLoader(), bound);
-                check(chooserRoles.get("filter").contains("->H(Ljava/util/List;)Ljava/util/List;"), "direct candidate baseline");
+                check(chooserRoles.get("filter").contains("->H(Ljava/util/List;)Ljava/util/List;")
+                        || chooserRoles.get("filter").contains("->H(Ljava/util/List;Z)Ljava/util/List;"),
+                        "direct candidate baseline");
                 Object device = bound.deviceConstructor.newInstance();
                 bound.invoke("device.setKey", device, "airdrop:123");
                 bound.invoke("device.setName", device, "DexKit test");
