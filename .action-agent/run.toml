@@ -1,0 +1,57 @@
+version = 1
+scratch_file = ".action-agent/scratch.py"
+include_scratch = true
+task_dir = ".action-agent/tasks"
+output_dir = ".action-agent/output"
+result_file = ".action-agent/result.json"
+platform = "ubuntu-latest"
+python_version = "3.12"
+max_tasks = 8
+default_timeout = 1800
+reset_after_run = true
+commit_reset = true
+commit_result = true
+commit_outputs = false
+upload_artifact = true
+
+[commands]
+default_run = []
+
+[execution]
+default_shell = "bash"
+default_cwd = "."
+default_reset_on = "always"
+continue_on_error = false
+fail_if_no_task = false
+fail_workflow_on_task_failure = false
+
+[output]
+mode = "both"
+artifact = true
+commit = false
+excerpt_bytes = 20000
+failed_excerpt_bytes = 100000
+
+[comment]
+enabled = true
+issue = "auto"
+auto_create_issue = true
+auto_issue_title = "ActionAgent"
+auto_issue_marker = "<!-- action-agent-issue:v1 -->"
+auto_issue_body = "ActionAgent run results and summaries."
+auto_issue_state = "open"
+auto_issue_labels = []
+marker = "<!-- action-agent-result:v1 -->"
+mode = "excerpt"
+artifact_name = "action-agent-output"
+max_comment_bytes = 10000
+success_excerpt_bytes = 6000
+failed_excerpt_bytes = 12000
+
+[comment.cleanup]
+enabled = true
+max_count = 10
+max_total_bytes = 60000
+target_total_bytes = 55000
+min_keep = 3
+delete_only_marked = true
