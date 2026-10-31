@@ -6,7 +6,7 @@
 
 ## 构建
 
-环境：JDK 17、Android SDK Platform 37。项目使用 Gradle wrapper 8.13、AGP 8.13.2 与 libxposed API 102.0.0。
+环境：JDK 17、Android SDK Platform 37。项目使用 Gradle wrapper 9.3.1、AGP 9.1.1 与 libxposed API 102.0.0。
 
 ```sh
 ./gradlew :app:assembleRelease
