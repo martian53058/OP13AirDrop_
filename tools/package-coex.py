@@ -20,6 +20,7 @@ ROOT = Path(__file__).resolve().parents[1]
 from release import emit_metadata, read_properties
 from mosey_apks import extend_callback_manifest, install_apks
 from mosey_runtime import stage_runtime
+from snapshot import extract_snapshot, extract_zip_archive
 
 
 def digest(data):
@@ -98,13 +99,9 @@ def main():
             expected, name = line.split(None, 1)
             if digest(archive.read(name)) != expected:
                 raise ValueError(f'Installer hash mismatch: {name}')
-        archive.extractall(output)
+        extract_zip_archive(archive, output)
 
-    with tarfile.open(args.snapshot) as archive:
-        names = [m.name.rstrip('/') for m in archive.getmembers()]
-        if len(names) != len(set(names)):
-            raise ValueError('Duplicate snapshot paths')
-        archive.extractall(captured, filter='data')
+    extract_snapshot(args.snapshot, captured)
     manifest = dict(reversed(line.split(None, 1)) for line in
                     (captured / 'SHA256SUMS').read_text().splitlines())
     snapshot_hashes = {}

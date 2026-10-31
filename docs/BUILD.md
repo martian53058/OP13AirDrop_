@@ -11,9 +11,9 @@ python3 tools/build-native.py --sdk "$ANDROID_HOME" --ndk "$ANDROID_NDK_HOME"
 (cd oshare && ./gradlew :app:assembleRelease --offline)
 (cd webui && npm run check && npm run build)
 python3 tools/package-coex.py \
-  --snapshot local-inputs/coex/module.tar \
+  --snapshot local-inputs/coex/original-module.zip \
   --bridge oshare/app/build/outputs/apk/release/app-release.apk \
-  --installer-base dist/OPAirDrop-v1.0.16.zip \
+  --installer-base local-inputs/coex/original-module.zip \
   --mosey-apks "local-inputs/mosey/Quick Share extension_1.0.980159239.apks" \
   --mosey-server local-inputs/mosey/mosey_server \
   --mosey-ffi local-inputs/mosey/libmosey_daemon_ffi.so
@@ -63,11 +63,11 @@ sdkmanager \
 
 ## 2. 本地输入
 
-`local-inputs/` 用于存放从适配设备和对应系统版本取得的构建输入。模块装配使用以下文件：
+`local-inputs/` 用于存放从适配设备和对应系统版本取得的构建输入。若保留了 ColorOS 17.0.0.103 原始模块 ZIP，可将同一 ZIP 同时传给 `--snapshot` 和 `--installer-base`；打包器现已支持从原始模块 ZIP 安全重建快照。若没有原始 ZIP，则需提供旧格式 `module.tar` 与对应 installer-base ZIP。模块装配使用以下文件：
 
 | 输入 | 用途 |
 | --- | --- |
-| 原版 Mosey60715 APKS bundle（base.apk + 全部 splits） | 系统包扫描、provider 认证和回调 APK 构建基线；打包时校验全部 15 个 APK 的 SHA256 |
+| ColorOS 17.0.0.103 原始模块 ZIP（建议） | 同时作为 `--snapshot` 与 `--installer-base`，提供已验证的原生驱动、VINTF、权限策略、安装脚本和快照清单 |\n| 原版 Mosey60715 APKS bundle（base.apk + 全部 splits） | 系统包扫描、provider 认证和回调 APK 构建基线；打包时校验全部 15 个 APK 的 SHA256 |
 | `local-inputs/mosey/mosey_server` | 从原模块提取的 Binder 原生服务，按 ELF64/AArch64/依赖校验后原样装配 |
 | `local-inputs/mosey/libmosey_daemon_ffi.so` | 与原服务配套的 Mosey 无线协议库；仅精确匹配已知 SHA 的构建才应用 peer-grace 指令补丁 |
 | 匹配设备的原厂 WLAN 模块 | 导入接口、导出符号与原厂恢复对照 |
