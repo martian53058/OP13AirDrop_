@@ -1,5 +1,5 @@
 """
-run = true
+run = false
 name = "Resolve WebUI high-severity npm advisories"
 reason = "Update the lockfile to the non-major Vue and Vite versions identified by npm audit, then verify the WebUI before committing the lockfile"
 timeout = 900
