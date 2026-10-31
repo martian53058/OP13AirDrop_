@@ -67,11 +67,11 @@ print(f"Build Tools 37.0.0 installed: {(build_tools / 'apksigner').is_file()}")
 print("The Gradle project defaults are used; no compileSdk/targetSdk override is passed.")
 
 run("Compile release Java against the checked-in API 37 configuration", [
-    "oshare/gradlew", "--no-daemon", ":app:compileReleaseJavaWithJavac"
+    "oshare/gradlew", "-p", "oshare", "--no-daemon", ":app:compileReleaseJavaWithJavac"
 ], timeout=900)
 
 run("Process release Android resources and manifest", [
-    "oshare/gradlew", "--no-daemon", ":app:processReleaseResources"
+    "oshare/gradlew", "-p", "oshare", "--no-daemon", ":app:processReleaseResources"
 ], timeout=900)
 
 print("\nPASS: OShare source compiled and release resources processed with compileSdk 37 / targetSdk 37.")
