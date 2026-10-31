@@ -7,11 +7,26 @@ root_enter_global "$0" "$@" || exit 2
 . "$MODDIR/bin/common.sh"
 . "$MODDIR/bin/kernel-identity.sh"
 . "$MODDIR/bin/compatibility.sh"
+STOCK_MODULE_DIR=/vendor/lib/modules
 init_state
 . "$MODDIR/bin/transfer-power.sh"
+preflight_restore_inputs() {
+    for stock_module in "$STOCK_MODULE_DIR/qca_cld3_peach_v2.ko" "$STOCK_MODULE_DIR/mac80211.ko"; do
+        [ -r "$stock_module" ] || {
+            echo "Recovery prerequisite missing: $stock_module" >&2
+            return 2
+        }
+    done
+    hal_state=$(getprop init.svc.vendor.wifi_hal_legacy)
+    case "$hal_state" in
+        running|stopped) ;;
+        *) echo "Wi-Fi HAL state is not recoverable: ${hal_state:-unknown}" >&2; return 2;;
+    esac
+}
 preflight() {
     [ "$(id -u)" = 0 ] || return 2
-    compatibility_device
+    compatibility_device || return $?
+    preflight_restore_inputs
 }
 lock_stack() {
     exec 9> "$STATE/stack.flock"
@@ -158,7 +173,7 @@ restore_owned() {
             rmmod qca_cld3_peach_v2 || return 11
         fi
         if loaded opairshare_wonder_provider; then rmmod opairshare_wonder_provider || return 12; fi
-        if ! loaded qca_cld3_peach_v2; then insmod /vendor/lib/modules/qca_cld3_peach_v2.ko || return 13; fi
+        if ! loaded qca_cld3_peach_v2; then insmod "$STOCK_MODULE_DIR/qca_cld3_peach_v2.ko" || return 13; fi
         loaded qca_cld3_peach_v2 || return 13
         rm -f "$STATE/qca-swapped" "$STATE/provider-added"
     elif same_boot "$STATE/provider-added"; then
@@ -167,7 +182,7 @@ restore_owned() {
     fi
     if same_boot "$STATE/mac-swapped"; then
         if loaded mac80211 && [ "$(module_note mac80211)" = "$NOTE_mac80211" ]; then rmmod mac80211 || return 14; fi
-        if ! loaded mac80211; then insmod /vendor/lib/modules/mac80211.ko || return 15; fi
+        if ! loaded mac80211; then insmod "$STOCK_MODULE_DIR/mac80211.ko" || return 15; fi
         loaded mac80211 || return 15
         rm -f "$STATE/mac-swapped"
     fi
