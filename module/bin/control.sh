@@ -16,6 +16,19 @@ preflight_restore_inputs() {
             echo "Recovery prerequisite missing: $stock_module" >&2
             return 2
         }
+        case "${stock_module##*/}" in
+            qca_cld3_peach_v2.ko) expected_stock_sha=$STOCK_SHA256_qca_cld3_peach_v2;;
+            mac80211.ko) expected_stock_sha=$STOCK_SHA256_mac80211;;
+            *) echo "Unknown stock recovery module: $stock_module" >&2; return 2;;
+        esac
+        case "$expected_stock_sha" in
+            ''|BUILD_REQUIRED) echo "Recovery module SHA256 is not pinned: $stock_module" >&2; return 2;;
+        esac
+        actual_stock_sha=$(sha256sum "$stock_module" 2>/dev/null | awk '{print $1}') || return 2
+        [ -n "$actual_stock_sha" ] && [ "$actual_stock_sha" = "$expected_stock_sha" ] || {
+            echo "Recovery module identity mismatch: $stock_module" >&2
+            return 2
+        }
     done
     hal_state=$(getprop init.svc.vendor.wifi_hal_legacy)
     case "$hal_state" in
@@ -159,6 +172,7 @@ restore_state_allowed() {
     # Keep ownership checks for our provider/Wonder; let insmod validate ABI.
 }
 restore_owned() {
+    preflight_restore_inputs || return 2
     restore_state_allowed || return 3
     /system/bin/sh "$MODDIR/bin/provider.sh" release
     stop_native || return $?

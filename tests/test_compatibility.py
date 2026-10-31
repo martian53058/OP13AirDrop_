@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Exercise Oplus/sun admission at the install and start entrypoints."""
 from pathlib import Path
+import hashlib
 import os
 import shutil
 import subprocess
@@ -52,6 +53,10 @@ class CompatibilityTests(unittest.TestCase):
             path.chmod(0o755)
         self.env = dict(os.environ, PATH=str(self.tools) + os.pathsep + os.environ['PATH'])
         shutil.copy2(ROOT / 'module/bin/kernel-identity.sh', self.bin)
+        stock_sha = hashlib.sha256(b'stock module fixture').hexdigest()
+        with (self.bin / 'kernel-identity.sh').open('a') as identity:
+            identity.write(f'\nSTOCK_SHA256_qca_cld3_peach_v2={stock_sha}\n')
+            identity.write(f'STOCK_SHA256_mac80211={stock_sha}\n')
         self.live = self.base / 'live'
         self.live.mkdir()
         for name in ('qca_cld3_peach_v2', 'mac80211'):
@@ -172,6 +177,12 @@ module_note() {{ cat '{self.live}/'$1 2>/dev/null; }}
                 (self.bin / 'kernel-identity.sh').write_text('')
                 result = self.install()
                 self.assertEqual(result.returncode, 0, result.stderr)
+
+    def test_wrong_stock_recovery_module_rejects_before_driver_changes(self):
+        (self.vendor / 'mac80211.ko').write_bytes(b'other device stock module')
+        result = self.start()
+        self.assert_rejected(result, 'Recovery module identity mismatch')
+        self.assertFalse(self.marker.exists())
 
     def test_missing_stock_restore_module_rejects_before_driver_changes(self):
         (self.vendor / 'qca_cld3_peach_v2.ko').unlink()

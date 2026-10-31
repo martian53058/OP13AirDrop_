@@ -222,15 +222,25 @@ class EffectiveMounts(unittest.TestCase):
         self.device = self.base / 'device'
         # Minimal real file tree; no manager or metamodule directory exists.
         self.binary = 'system_ext/bin/mosey_server'
+        runtime_entries = []
         for rel in [self.binary, 'system_ext/lib64/libmosey_daemon_ffi.so']:
             source = self.module / 'system' / rel
             source.parent.mkdir(parents=True, exist_ok=True)
             source.write_text('fixture')
             source.chmod(0o755)
+            runtime_entries.append(
+                f'{hashlib.sha256(source.read_bytes()).hexdigest()}  {rel}')
+        (self.module / 'MOSEY-RUNTIME-SHA256SUMS').write_text(
+            '\n'.join(runtime_entries) + '\n')
+        apk_entries = []
         for line in (self.module / 'APP-SHA256SUMS').read_text().splitlines():
-            apk = self.module / 'system/system_ext/priv-app/MoseyApp' / line.split()[1]
+            name = line.split()[1]
+            apk = self.module / 'system/system_ext/priv-app/MoseyApp' / name
             apk.parent.mkdir(parents=True, exist_ok=True)
             apk.write_text('original APK')
+            apk_entries.append(
+                f'{hashlib.sha256(apk.read_bytes()).hexdigest()}  {name}')
+        (self.module / 'APP-SHA256SUMS').write_text('\n'.join(apk_entries) + '\n')
         shutil.copytree(self.module / 'system', self.device)
 
     def check(self):
@@ -251,6 +261,21 @@ class EffectiveMounts(unittest.TestCase):
         self.assertIn(self.binary, result.stderr)
         self.assertIn('Mountify', result.stderr)
         self.assertIn('skip_mount', result.stderr)
+
+    def test_conflicting_runtime_or_apk_overlay_is_rejected_by_hash(self):
+        ffi = self.device / 'system_ext/lib64/libmosey_daemon_ffi.so'
+        ffi.write_text('different but readable FFI')
+        result = self.check()
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn('system runtime checksum mismatch', result.stderr)
+
+        source = self.module / 'system/system_ext/lib64/libmosey_daemon_ffi.so'
+        shutil.copy2(source, ffi)
+        apk = self.device / 'system_ext/priv-app/MoseyApp/split_config.en.apk'
+        apk.write_text('different but readable APK')
+        result = self.check()
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn('system APK checksum mismatch', result.stderr)
 
     def test_conflicting_xml_or_missing_split_is_rejected(self):
         path = self.device / 'product/etc/permissions/mosey-hiddenapi-opairshare.xml'

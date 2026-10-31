@@ -13,10 +13,13 @@ import re
 import shutil
 import stat
 import subprocess
+import sys
 import tarfile
 import zipfile
 
 ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / 'tools/kernel'))
+from module_abi import compare_shared_imports, inspect as inspect_kernel_module, verify_module_imports
 from release import emit_metadata, read_properties
 from mosey_apks import extend_callback_manifest, install_apks
 from mosey_runtime import stage_runtime
@@ -63,6 +66,12 @@ def main():
                         help='Original module-supplied ARM64 mosey_server binary')
     parser.add_argument('--mosey-ffi', type=Path, required=True,
                         help='Matching original module-supplied libmosey_daemon_ffi.so')
+    parser.add_argument('--stock-qca', type=Path, required=True,
+                        help='Exact target-phone vendor qca_cld3_peach_v2.ko')
+    parser.add_argument('--stock-mac', type=Path, required=True,
+                        help='Exact target-phone vendor mac80211.ko')
+    parser.add_argument('--module-symvers', type=Path, required=True,
+                        help='Module.symvers from the exact target kernel build')
     args = parser.parse_args()
     properties = read_properties((ROOT / 'module/module.prop').read_text())
     version, version_code = properties['version'], int(properties['versionCode'])
@@ -153,6 +162,89 @@ def main():
     if sidecar.exists():
         shutil.move(sidecar, output / 'mosey-peer-grace.json')
     overlay_sources(output)
+
+    # Do not trust STOCK_NOTE values copied from a reference-device snapshot.
+    # Pin rollback inputs to the exact stock modules supplied for this target.
+    stock_inputs = {
+        'qca_cld3_peach_v2': args.stock_qca,
+        'mac80211': args.stock_mac,
+    }
+    stock_info = {}
+    for name, path in stock_inputs.items():
+        info = inspect_kernel_module(path)
+        if info['modinfo'].get('name') != [name]:
+            raise ValueError(f'Stock module name mismatch for {name}: {info["modinfo"].get("name")}')
+        if not info['build_id'] or len(info['build_id']) != 40:
+            raise ValueError(f'Stock module has no 20-byte GNU build ID: {path}')
+        stock_info[name] = info
+
+    # Every imported CRC must be present and identical in the exact target
+    # Module.symvers for both stock references and all four shipped modules.
+    kernel_paths = {
+        'stock_qca_cld3_peach_v2': args.stock_qca,
+        'stock_mac80211': args.stock_mac,
+        'qca_cld3_peach_v2': output / 'payload/kernel/qca_cld3_peach_v2.ko',
+        'mac80211': output / 'payload/kernel/mac80211.ko',
+        'wonder': output / 'payload/kernel/wonder.ko',
+        'oneplus13_wonder_provider': output / 'payload/kernel/oneplus13_wonder_provider.ko',
+    }
+    kernel_abi_checks = {}
+    kernel_module_info = {}
+    for name, path in kernel_paths.items():
+        info = inspect_kernel_module(path)
+        kernel_module_info[name] = info
+        result = verify_module_imports(path, [args.module_symvers])
+        if result['status'] != 'CRC_MATCH_ONLY':
+            raise ValueError(
+                f'Module.symvers ABI check failed for {name}: '
+                f'missing={result["missing"][:12]} mismatches={result["mismatches"]}'
+            )
+        kernel_abi_checks[name] = result
+
+    shared_import_checks = {
+        'qca_cld3_peach_v2': compare_shared_imports(
+            args.stock_qca, kernel_paths['qca_cld3_peach_v2']),
+        'mac80211': compare_shared_imports(
+            args.stock_mac, kernel_paths['mac80211']),
+    }
+    for name, result in shared_import_checks.items():
+        if result['mismatches']:
+            raise ValueError(f'Stock/custom {name} shared import CRC mismatch: {result["mismatches"]}')
+
+    def vermagic_flags(info):
+        values = info['modinfo'].get('vermagic', [])
+        if len(values) != 1:
+            raise ValueError('Kernel module must contain exactly one vermagic value')
+        return values[0].split()[1:]
+
+    for stock_name, custom_name in (
+            ('stock_qca_cld3_peach_v2', 'qca_cld3_peach_v2'),
+            ('stock_mac80211', 'mac80211')):
+        if vermagic_flags(kernel_module_info[stock_name]) != vermagic_flags(kernel_module_info[custom_name]):
+            raise ValueError(f'Kernel vermagic flags differ: {stock_name} vs {custom_name}')
+
+    identity_path = output / 'bin/kernel-identity.sh'
+    identity_lines = identity_path.read_text().splitlines()
+    def set_identity_value(key, value):
+        prefix = key + '='
+        for index, line in enumerate(identity_lines):
+            if line.startswith(prefix):
+                identity_lines[index] = prefix + value
+                return
+        identity_lines.append(prefix + value)
+
+    note_prefix = '040000001400000003000000474e5500'
+    for name, info in stock_info.items():
+        set_identity_value('STOCK_NOTE_' + name, note_prefix + info['build_id'])
+        set_identity_value('STOCK_SHA256_' + name, info['sha256'])
+    identity_path.write_text('\n'.join(identity_lines) + '\n')
+
+    runtime_manifest = [
+        f"{mosey_runtime['server']['sha256']}  system_ext/bin/mosey_server",
+        f"{mosey_runtime['ffi']['output_sha256']}  system_ext/lib64/libmosey_daemon_ffi.so",
+    ]
+    (output / 'MOSEY-RUNTIME-SHA256SUMS').write_text('\n'.join(runtime_manifest) + '\n')
+
     # Only the measured SET_FREQUENCY adapter is new; retain the captured driver
     # and other native helpers rather than shipping experimental kernel payloads.
     channel = ROOT / 'build/native/libopairshare_channel.so'
@@ -191,6 +283,16 @@ def main():
         'mosey_apk_sha256': mosey_hashes,
         'mosey_runtime': mosey_runtime,
         'stability_patch_status': mosey_runtime['peer_grace_patch_status'],
+        'kernel_abi': {
+            'module_symvers_sha256': digest(args.module_symvers.read_bytes()),
+            'stock_modules': {
+                name: {'sha256': info['sha256'], 'build_id': info['build_id'],
+                       'vermagic': info['modinfo'].get('vermagic', [])}
+                for name, info in stock_info.items()
+            },
+            'modules_checked': kernel_abi_checks,
+            'shared_import_checks': shared_import_checks,
+        },
         'receive_ui': True,
         'share_mode': True,
         'oshare_source_sha256': {
