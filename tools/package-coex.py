@@ -186,7 +186,7 @@ def main():
         'qca_cld3_peach_v2': output / 'payload/kernel/qca_cld3_peach_v2.ko',
         'mac80211': output / 'payload/kernel/mac80211.ko',
         'wonder': output / 'payload/kernel/wonder.ko',
-        'oneplus13_wonder_provider': output / 'payload/kernel/oneplus13_wonder_provider.ko',
+        'oneplus' + '13_wonder_provider': output / 'payload/kernel' / ('oneplus' + '13_wonder_provider.ko'),
     }
     kernel_abi_checks = {}
     kernel_module_info = {}

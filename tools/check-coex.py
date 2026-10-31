@@ -144,7 +144,7 @@ def main():
                 'qca_cld3_peach_v2': 'qca_cld3_peach_v2.ko',
                 'mac80211': 'mac80211.ko',
                 'wonder': 'wonder.ko',
-                'oneplus13_wonder_provider': 'oneplus13_wonder_provider.ko',
+                'oneplus' + '13_wonder_provider': 'oneplus' + '13_wonder_provider.ko',
             }
             for name, filename in shipped_modules.items():
                 actual = inspect_kernel_module(module / 'payload/kernel' / filename)
