@@ -14,7 +14,7 @@ fun signingValue(name: String): String? = signingProperties.getProperty(name) ?:
 
 android {
     namespace = "com.tlsu.oshareairdrop"
-    compileSdk = 37
+    compileSdk = providers.gradleProperty("opairshareCompileSdk").orNull?.toInt() ?: 37
 
     defaultConfig {
         applicationId = "com.tlsu.oshareairdrop"
