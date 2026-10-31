@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Check a packaged coexistence module without installing or changing a device."""
 from pathlib import Path
+import sys
 import argparse
 import hashlib
 import json
@@ -11,6 +12,9 @@ import struct
 import subprocess
 import tempfile
 import zipfile
+ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / 'tools/kernel'))
+from module_abi import inspect as inspect_kernel_module
 from release import inspect_archive
 from mosey_runtime import inspect_elf
 
@@ -118,6 +122,40 @@ def main():
                 assert runtime['peer_grace_patch_status'] == 'not_applied_unrecognized_build_preserved'
                 assert runtime['ffi']['output_sha256'] == runtime['ffi']['sha256']
             print('PASS original-module Mosey server/FFI ELF identity, dependencies and binary provenance')
+            runtime_manifest = dict(reversed(line.split(None, 1)) for line in
+                                    (module / 'MOSEY-RUNTIME-SHA256SUMS').read_text().splitlines())
+            assert runtime_manifest == {
+                'system_ext/bin/mosey_server': runtime['server']['sha256'],
+                'system_ext/lib64/libmosey_daemon_ffi.so': runtime['ffi']['output_sha256'],
+            }
+        kernel_abi = build_info.get('kernel_abi')
+        if kernel_abi:
+            assert re.fullmatch(r'[0-9a-f]{64}', kernel_abi['module_symvers_sha256'])
+            identity = dict(line.split('=', 1) for line in
+                            (module / 'bin/kernel-identity.sh').read_text().splitlines()
+                            if '=' in line)
+            note_prefix = '040000001400000003000000474e5500'
+            for name, expected in kernel_abi['stock_modules'].items():
+                assert identity['STOCK_SHA256_' + name] == expected['sha256']
+                assert identity['STOCK_NOTE_' + name] == note_prefix + expected['build_id']
+            for name, result in kernel_abi['modules_checked'].items():
+                assert result['status'] == 'CRC_MATCH_ONLY', name
+            shipped_modules = {
+                'qca_cld3_peach_v2': 'qca_cld3_peach_v2.ko',
+                'mac80211': 'mac80211.ko',
+                'wonder': 'wonder.ko',
+                'oneplus13_wonder_provider': 'oneplus13_wonder_provider.ko',
+            }
+            for name, filename in shipped_modules.items():
+                actual = inspect_kernel_module(module / 'payload/kernel' / filename)
+                expected = kernel_abi['modules_checked'][name]
+                assert actual['sha256'] == expected['sha256'], name
+                assert actual['build_id'] == expected['build_id'], name
+                assert len(actual['versions']) == expected['imported_symbols'], name
+            for name, result in kernel_abi['shared_import_checks'].items():
+                assert result['status'] == 'SHARED_CRC_MATCH_ONLY', name
+                assert not result['mismatches'], name
+            print('PASS target stock module identities and all kernel imports against recorded exact Module.symvers')
         if build_info.get('stability_patch'):
             patch = build_info['stability_patch']
             library = (module / 'system/system_ext/lib64/libmosey_daemon_ffi.so').read_bytes()
