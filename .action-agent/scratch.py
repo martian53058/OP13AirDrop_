@@ -1,5 +1,5 @@
 """
-run = false
+run = true
 name = "ColorOS 17 full source regression and component build"
 reason = "Run all host regressions and build every source-controlled userspace component using the pinned Android 17 toolchain"
 timeout = 1800
@@ -14,9 +14,10 @@ run = [
   "python3 tools/check.py",
   "python3 -m unittest discover -s tests -p 'test_*.py' -v",
   "sh oshare/tests/run.sh",
+  "cd webui && npm ci",
   "node tests/test-api.mjs",
   "node tests/test-webui-refresh.mjs",
-  "cd webui && npm ci && npm run check && npm run build",
+  "cd webui && npm run check && npm run build",
   "oshare/gradlew -p oshare --no-daemon :app:compileReleaseJavaWithJavac :app:processReleaseResources"
 ]
 after = []
