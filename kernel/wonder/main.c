@@ -334,8 +334,10 @@ static int __init wonder_init(void)
 	ret = platform_driver_register(&wonder_driver);
 	if (ret) {
 		pr_err("wonder: failed to register platform driver (%d)\n", ret);
-		platform_device_unregister(wonder_device);
-		wonder_device = NULL;
+		if (wonder_device) {
+			platform_device_unregister(wonder_device);
+			wonder_device = NULL;
+		}
 		return ret;
 	}
 
