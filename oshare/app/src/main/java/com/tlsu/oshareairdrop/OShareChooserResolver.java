@@ -26,7 +26,7 @@ import java.util.Map;
 
 /** Optional capability with its own fingerprint/cache; never guesses obfuscated symbols. */
 public final class OShareChooserResolver {
-    public static final int SCHEMA = 1;
+    public static final int SCHEMA = 2;
     private OShareChooserResolver() {}
 
     public static Map<String, String> scan(DexKitBridge dex, Map<String, String> base) {
