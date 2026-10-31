@@ -1,5 +1,5 @@
 """
-run = true
+run = false
 name = "Check Android SDK 37 release build availability"
 reason = "Determine whether the configured GitHub Actions SDK repository can provide the bridge project's required compileSdk and targetSdk 37"
 timeout = 600
