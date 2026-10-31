@@ -118,11 +118,11 @@ Already received:
 
 Still needed:
 
-1. `/system_ext/bin/mosey_server`.
-2. `/system_ext/lib64/libmosey_daemon_ffi.so`.
+1. `mosey_server`: first try `/system_ext/bin/mosey_server`; also search `/vendor/bin/mosey_server` and `/system/bin/mosey_server`.
+2. `libmosey_daemon_ffi.so`: first try `/system_ext/lib64/libmosey_daemon_ffi.so`; also search `/vendor/lib64/libmosey_daemon_ffi.so` and `/system/lib64/libmosey_daemon_ffi.so`.
 3. The exact .103 kernel source branch/archive and its matching generated `.config` and `Module.symvers`.
 
-For the two Mosey native files, use a root-capable file manager and navigate directly to the paths above. If the file manager cannot see `/system_ext`, try its equivalent `/system/system_ext` path or search the root filesystem for the exact filenames. These files are proprietary system components and are not part of the public kernel source.
+For the two Mosey native files, use a root-capable file manager's global search for the exact filenames, or navigate to the candidate directories above. The repository expects the `system_ext` locations, but other Android builds place the daemon or FFI library under `vendor`. Upload the files wherever they are actually found; the module can be adapted to their real origin. These are proprietary system components and are not part of the public kernel source.
 
 `.config` may be available as `/proc/config.gz` if the kernel exposes IKCONFIG_PROC; this is a file to copy, not a command to run. `Module.symvers` is normally generated in the kernel build directory and is not usually installed on the phone. If you do not have it, provide the exact source URL/branch and build configuration, or the matching firmware's kernel build artifacts. The old snapshot archive `local-inputs/coex/module.tar` and installer base ZIP are also not present in the public repository; upload them if you still have those local build inputs.
 
