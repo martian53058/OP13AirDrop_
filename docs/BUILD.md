@@ -13,7 +13,8 @@ python3 tools/build-native.py --sdk "$ANDROID_HOME" --ndk "$ANDROID_NDK_HOME"
 python3 tools/package-coex.py \
   --snapshot local-inputs/coex/module.tar \
   --bridge oshare/app/build/outputs/apk/release/app-release.apk \
-  --installer-base dist/OPAirDrop-v1.0.16.zip
+  --installer-base dist/OPAirDrop-v1.0.16.zip \
+  --mosey-apks "local-inputs/mosey/Quick Share extension_1.0.980159239.apks"
 python3 tools/check-coex.py dist/OPAirDrop-v1.0.23-PJZ110.zip
 ```
 
@@ -64,7 +65,7 @@ sdkmanager \
 
 | 输入 | 用途 |
 | --- | --- |
-| 原版 Mosey `base.apk` 与 splits | 系统包扫描、provider 认证和补丁构建基线 |
+| 原版 Mosey60715 APKS bundle（base.apk + 全部 splits） | 系统包扫描、provider 认证和回调 APK 构建基线；打包时校验全部 15 个 APK 的 SHA256 |
 | `mosey_server` | Binder 原生服务 |
 | `libmosey_daemon_ffi.so` | Mosey 无线协议实现 |
 | 匹配设备的原厂 WLAN 模块 | 导入接口、导出符号与原厂恢复对照 |

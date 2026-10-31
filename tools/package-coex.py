@@ -18,6 +18,7 @@ import zipfile
 
 ROOT = Path(__file__).resolve().parents[1]
 from release import emit_metadata, read_properties
+from mosey_apks import extend_callback_manifest, install_apks
 
 
 def digest(data):
@@ -54,6 +55,8 @@ def main():
     parser.add_argument('--bridge', type=Path, required=True,
                         help='Freshly built signed release bridge APK')
     parser.add_argument('--installer-base', type=Path, required=True)
+    parser.add_argument('--mosey-apks', type=Path, required=True,
+                        help='Verified original Mosey60715 APKS bundle for this target')
     args = parser.parse_args()
     properties = read_properties((ROOT / 'module/module.prop').read_text())
     version, version_code = properties['version'], int(properties['versionCode'])
@@ -130,6 +133,14 @@ def main():
             raise ValueError('Invalid bridge APK')
     (output / 'companion/OShareAirDrop.apk').write_bytes(bridge_data)
 
+    # Replace the captured six-split Mosey set with the exact target-device set.
+    shutil.copy2(ROOT / 'module/APP-SHA256SUMS', output / 'APP-SHA256SUMS')
+    mosey_dir = output / 'system/system_ext/priv-app/MoseyApp'
+    mosey_hashes = install_apks(args.mosey_apks, mosey_dir, output / 'APP-SHA256SUMS')
+    extend_callback_manifest(output / 'APP-CALLBACK-SHA256SUMS',
+                             output / 'APP-SHA256SUMS',
+                             output / 'APP-CALLBACK-SHA256SUMS')
+
     spec = importlib.util.spec_from_file_location('peer_grace', ROOT / 'tools/patch-mosey-peer-grace.py')
     patcher = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(patcher)
@@ -171,6 +182,8 @@ def main():
         'installer_base_sha256': digest(args.installer_base.read_bytes()),
         'bridge_sha256': digest(bridge_data),
         'bridge_version': bridge_version,
+        'mosey_apks_sha256': digest(args.mosey_apks.read_bytes()),
+        'mosey_apk_sha256': mosey_hashes,
         'receive_ui': True,
         'share_mode': True,
         'oshare_source_sha256': {
