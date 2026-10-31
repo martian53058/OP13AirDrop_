@@ -162,7 +162,7 @@ The owner supplied the two native files separately, identifying them as the miss
 
 Both are ELF64, little-endian, AArch64, ET_DYN. The server depends on `libbinder_ndk.so`, `liblog.so`, `libc.so` and `libdl.so`. The FFI SONAME is `libmosey_daemon_ffi.so`; it depends on `libdl.so`, `liblog.so`, `libc.so` and `libm.so`. The FFI contains `mosey_start_5`, `mosey_stop`, `mosey_update` and `mosey_dump`, and references the expected `wonder0` / `wonderradiotap0` interfaces.
 
-The FFI `.comment` identifies Android Clang 21.0.0 and Rust 1.95 nightly. Its SHA does **not** match the repository's older peer-grace patch input SHA `7de30b96...`. Therefore this uploaded FFI must be copied unchanged. The package builder now applies the old one-instruction peer-grace patch only when the source SHA exactly matches its hard-coded guard; it does not alter an unknown FFI build.
+The FFI `.comment` identifies Android Clang 21.0.0 and Rust 1.95 nightly. The uploaded SHA `a2240060...` is the exact output SHA in both `mosey-peer-grace.json` and `build-info.json`. Reverting the single instruction at offset `0x1e532c` from `52803001` to `52800c01` recovers the recorded source SHA `7de30b96...` exactly. This is byte-level confirmation that the supplied FFI is already the archive's guarded peer-grace output. The packager now recognizes that exact output and preserves it without applying the instruction twice.
 
 The exact input files have not been runtime-tested on the target phone, and their firmware provenance is based on the owner's identification as files extracted from the original module. The build records both hashes and ELF metadata for later audit.
 
@@ -179,9 +179,9 @@ ActionAgent run [41213115178](https://github.com/martian53058/OP13AirDrop_/actio
 
 The full release packager was not run because the original local snapshot archive, installer-base ZIP and signed release bridge APK are not present in the repository. The two proprietary binaries remain local inputs and were not uploaded to GitHub. No device operation was performed.
 
-### Dynamic FFI loader path
+### Mosey server FFI lookup
 
-`mosey_server` imports `dlopen`, `dlsym` and `dlclose`; the FFI is not a direct `DT_NEEDED` dependency. The launch environment therefore now explicitly includes `/system_ext/lib64` ahead of `/system/lib64` and `/vendor/lib64` in `LD_LIBRARY_PATH`, while retaining the existing preload shims. A host regression test verifies the search path and that the mount check precedes native startup.
+The supplied `mosey_server` contains the literal path `/system_ext/lib64/libmosey_daemon_ffi.so` at file offset `0xa4d0`. Its ELF `DT_NEEDED` entries are `libbinder_ndk.so`, `liblog.so`, `libc.so` and `libdl.so`; the FFI is loaded separately and is not a direct `DT_NEEDED` dependency. The literal absolute path is the available binary evidence, so an `LD_LIBRARY_PATH` override is not required and has been removed from the launch script. The startup mount check remains before Wi-Fi and driver mutations.
 
 ## Original module archive needed for final assembly
 

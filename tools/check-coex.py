@@ -111,7 +111,9 @@ def main():
             ffi_path = module / runtime['ffi']['path']
             assert hashlib.sha256(ffi_path.read_bytes()).hexdigest() == runtime['ffi']['output_sha256']
             if build_info.get('stability_patch'):
-                assert runtime['peer_grace_patch_status'] == 'applied_exact_guarded_build'
+                assert runtime['peer_grace_patch_status'] in (
+                    'applied_exact_guarded_build',
+                    'already_patched_exact_guarded_build')
             else:
                 assert runtime['peer_grace_patch_status'] == 'not_applied_unrecognized_build_preserved'
                 assert runtime['ffi']['output_sha256'] == runtime['ffi']['sha256']

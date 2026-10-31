@@ -134,6 +134,10 @@ def stage_runtime(server_path, ffi_path, module_root, patcher=None):
     if patcher is not None and ffi_info["sha256"] == patcher.SOURCE_SHA256:
         stability = patcher.write_patch(ffi_path, ffi_target)
         patch_status = "applied_exact_guarded_build"
+    elif patcher is not None and ffi_info["sha256"] == getattr(patcher, "PATCHED_SHA256", None):
+        stability = patcher.inspect_patched(ffi_path.read_bytes())
+        shutil.copyfile(ffi_path, ffi_target)
+        patch_status = "already_patched_exact_guarded_build"
     else:
         shutil.copyfile(ffi_path, ffi_target)
         patch_status = "not_applied_unrecognized_build_preserved"

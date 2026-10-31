@@ -123,6 +123,37 @@ class MoseyRuntimeTests(unittest.TestCase):
                          "not_applied_unrecognized_build_preserved")
         self.assertEqual(runtime["ffi"]["output_sha256"], runtime["ffi"]["sha256"])
 
+
+    def test_known_patched_output_is_recognized_and_preserved(self):
+        module = self.root / "module"
+        patched_sha = hashlib.sha256(self.ffi.read_bytes()).hexdigest()
+
+        class KnownPatcher:
+            SOURCE_SHA256 = "known-original-input"
+            PATCHED_SHA256 = patched_sha
+
+            @staticmethod
+            def inspect_patched(data):
+                if hashlib.sha256(data).hexdigest() != patched_sha:
+                    raise AssertionError("unexpected patched output")
+                return {"input_sha256": KnownPatcher.SOURCE_SHA256,
+                        "output_sha256": patched_sha,
+                        "file_offset": 12,
+                        "old_instruction": "00000000",
+                        "new_instruction": "00000001"}
+
+            @staticmethod
+            def write_patch(*_args):
+                raise AssertionError("already-patched FFI must not be patched again")
+
+        runtime, patch = stage_runtime(self.server, self.ffi, module, KnownPatcher)
+        target = module / "system/system_ext/lib64/libmosey_daemon_ffi.so"
+        self.assertEqual(target.read_bytes(), self.ffi.read_bytes())
+        self.assertEqual(runtime["peer_grace_patch_status"],
+                         "already_patched_exact_guarded_build")
+        self.assertEqual(runtime["ffi"]["output_sha256"], patched_sha)
+        self.assertEqual(patch["output_sha256"], patched_sha)
+
     def test_exact_guarded_build_can_use_existing_peer_grace_patcher(self):
         module = self.root / "module"
         expected = hashlib.sha256(self.ffi.read_bytes()).hexdigest()

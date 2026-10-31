@@ -23,6 +23,7 @@ SOURCE_SHA256 = '7de30b96a0a413eb6348860e76fb2032edf7f350658857bea3c2862b666dd9e
 PATCH_OFFSET = 0x1e532c
 OLD_INSTRUCTION = 0x52800c01
 NEW_INSTRUCTION = 0x52803001
+PATCHED_SHA256 = 'a224006052218527e38c9e8614c92d1165906769aa1438a1b828e854637d4334'
 GUARDS = {0x1e5348: 0x94004a06, 0x1e534c: 0x94005288,
           0x1e550c: 0xf9012299, 0x1e5510: 0xb9024a9a,
           0x1e4d70: 0xf9412275, 0x1e4d8c: 0xb9424a78}
@@ -37,6 +38,29 @@ def patch(data):
     output = bytearray(data)
     struct.pack_into('<I', output, PATCH_OFFSET, NEW_INSTRUCTION)
     return bytes(output)
+
+
+def inspect_patched(data):
+    """Recognize the exact known output without applying the instruction twice."""
+    actual = hashlib.sha256(data).hexdigest()
+    if actual != PATCHED_SHA256:
+        raise ValueError('Unsupported patched Mosey FFI SHA256')
+    for offset, expected in {PATCH_OFFSET: NEW_INSTRUCTION, **GUARDS}.items():
+        if struct.unpack_from('<I', data, offset)[0] != expected:
+            raise ValueError(f'Unexpected patched instruction at {offset:#x}')
+    restored = bytearray(data)
+    struct.pack_into('<I', restored, PATCH_OFFSET, OLD_INSTRUCTION)
+    if hashlib.sha256(restored).hexdigest() != SOURCE_SHA256:
+        raise ValueError('Reverting the guarded instruction does not recover the exact source SHA256')
+    return {'input_sha256': SOURCE_SHA256,
+            'output_sha256': PATCHED_SHA256,
+            'file_offset': PATCH_OFFSET,
+            'old_instruction': f'{OLD_INSTRUCTION:08x}',
+            'new_instruction': f'{NEW_INSTRUCTION:08x}',
+            'availability_period_multiplier': {'old': 96, 'new': 384},
+            'observed_period_tu': 16, 'old_grace_s': 1.572864, 'new_grace_s': 6.291456,
+            'validation': 'exact output hash, instruction guards, reverting one instruction recovers exact input SHA256',
+            'runtime_validation': 'required'}
 
 
 def write_patch(source, target):
