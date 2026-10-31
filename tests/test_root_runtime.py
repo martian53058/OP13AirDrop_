@@ -29,6 +29,9 @@ class RootRuntime(unittest.TestCase):
         self.env = {k: v for k, v in os.environ.items()
                     if k not in ('KSU', 'APATCH', 'MAGISK_VER', 'MAGISK_VER_CODE', 'OPAIRSHARE_GLOBAL_ENTERED')}
         self.env.update(CALLS=str(self.calls), PATH=str(self.system) + ':' + os.environ['PATH'])
+        # Prefer the deterministic fixture over a host BusyBox that may expose
+        # a real nsenter applet and escape the test's mocked namespace boundary.
+        self.command(self.system / 'busybox', 'if [ "$1" = "--list" ]; then printf "mount\\numount\\n"; else exit 127; fi')
 
     def command(self, path, code):
         path.parent.mkdir(parents=True, exist_ok=True)
