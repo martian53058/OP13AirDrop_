@@ -6,18 +6,26 @@ timeout = 1800
 priority = 10
 
 [commands]
-before = ["python3 tools/build-lsposed.py --sdk \"$ANDROID_HOME\""]
+before = []
 run = [
   "python3 tools/check.py",
-  "python3 -m unittest discover -s tests -p 'test_*.py'",
+  "python3 -m unittest discover -s tests -p 'test_compatibility.py'",
+  "python3 -m unittest discover -s tests -p 'test_chooser_foreground.py'",
+  "python3 -m unittest discover -s tests -p 'test_gms_unlock.py'",
+  "python3 -m unittest discover -s tests -p 'test_history.py'",
+  "python3 -m unittest discover -s tests -p 'test_oshare_installer.py'",
+  "python3 -m unittest discover -s tests -p 'test_receive_lifecycle.py'",
+  "python3 -m unittest discover -s tests -p 'test_release.py'",
+  "python3 -m unittest discover -s tests -p 'test_root_runtime.py'",
+  "python3 -m unittest discover -s tests -p 'test_settings.py'",
+  "python3 -m unittest discover -s tests -p 'test_share_mode.py'",
+  "python3 -m unittest discover -s tests -p 'test_transfer_performance.py'",
+  "python3 -m unittest discover -s tests -p 'test_verify.py'",
   "sh oshare/tests/run.sh",
-  "python3 tests/test_settings.py",
-  "python3 tests/test_share_mode.py",
-  "python3 tests/test_history.py",
   "node tests/test-api.mjs",
   "node tests/test-webui-refresh.mjs",
   "cd webui && npm ci && npm run check && npm run build"
-]
+
 after = []
 
 [output]
