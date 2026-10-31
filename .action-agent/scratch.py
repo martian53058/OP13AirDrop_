@@ -25,7 +25,7 @@ run = [
   "node tests/test-api.mjs",
   "node tests/test-webui-refresh.mjs",
   "cd webui && npm ci && npm run check && npm run build"
-
+]
 after = []
 
 [output]
