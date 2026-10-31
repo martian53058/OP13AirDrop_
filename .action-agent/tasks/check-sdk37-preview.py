@@ -1,5 +1,5 @@
 """
-run = true
+run = false
 name = "Check Android SDK 37 preview packages"
 reason = "Check all Android SDK repository channels for the required API 37 platform before deciding whether the bridge must be built elsewhere"
 timeout = 300
