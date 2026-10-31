@@ -34,10 +34,14 @@ public final class OShareChooserResolver {
         MethodData route = one("direct route", dex.findMethod(FindMethod.create().matcher(
                 MethodMatcher.create().usingStrings("handleDirectShareDeviceData key:")
                         .returnType("void").paramCount(3))));
+        // OShare 17.2.45 adds a boolean policy argument to the native candidate
+        // filter. The hook only merges the returned list, so both known contracts
+        // are safe; keep the declaring class and exact parameter shapes strict.
         MethodData filter = one("direct candidates", route.getInvokes().stream().filter(method ->
                 method.getClassName().equals(route.getClassName())
                         && method.getReturnTypeName().equals("java.util.List")
-                        && method.getParamTypeNames().equals(List.of("java.util.List"))).toList());
+                        && (method.getParamTypeNames().equals(List.of("java.util.List"))
+                            || method.getParamTypeNames().equals(List.of("java.util.List", "boolean")))).toList());
         values.put("filter", filter.getDescriptor());
         MethodData builder = one("shortcut builder", dex.findMethod(FindMethod.create().matcher(
                 MethodMatcher.create().declaredClass(route.getClassName()).usingStrings("buildShortcutItem ")
@@ -116,8 +120,10 @@ public final class OShareChooserResolver {
             unregister = bind(values, "unregisterCallback", loader);
             unregisterMulti = bind(values, "unregisterMultiCallback", loader);
             Class<?> wrapper = register.getParameterTypes()[0];
-            if (!List.class.isAssignableFrom(filter.getReturnType())
-                    || !java.util.Arrays.equals(filter.getParameterTypes(), new Class<?>[]{List.class})
+            Class<?>[] filterParams = filter.getParameterTypes();
+            boolean supportedFilter = java.util.Arrays.equals(filterParams, new Class<?>[]{List.class})
+                    || java.util.Arrays.equals(filterParams, new Class<?>[]{List.class, boolean.class});
+            if (!List.class.isAssignableFrom(filter.getReturnType()) || !supportedFilter
                     || secondary.getDeclaringClass() != base.type("extended")
                     || !java.util.Arrays.equals(secondary.getParameterTypes(), new Class<?>[]{String.class})
                     || secondary.getReturnType() != void.class
