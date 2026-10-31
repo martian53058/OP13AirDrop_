@@ -121,6 +121,7 @@ start_native() {
     OPAIRSHARE_ENABLE_HOPPING=1 OPAIRSHARE_SOCIAL_CHANNELS=149 \
         OPAIRSHARE_CONFIG_TRACE="$STATE/config-trace.log" \
         OPAIRSHARE_CHANNEL_PROFILE=freq20 \
+        LD_LIBRARY_PATH="/system_ext/lib64:/system/lib64:/vendor/lib64${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}" \
         LD_PRELOAD="$MODDIR/payload/native/libopairshare_capability.so:$MODDIR/payload/native/libopairshare_config.so:$MODDIR/payload/native/libopairshare_channel.so" \
         /system_ext/bin/mosey_server >> "$STATE/server.log" 2>&1 < /dev/null 9>&- &
     server=$!

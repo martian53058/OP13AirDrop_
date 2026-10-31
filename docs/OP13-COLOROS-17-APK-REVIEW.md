@@ -178,3 +178,7 @@ ActionAgent run [41213115178](https://github.com/martian53058/OP13AirDrop_/actio
 - The supplied binary files themselves were independently inspected with the same ELF metadata fields used by the new packager; their dependencies and build IDs match the recorded values.
 
 The full release packager was not run because the original local snapshot archive, installer-base ZIP and signed release bridge APK are not present in the repository. The two proprietary binaries remain local inputs and were not uploaded to GitHub. No device operation was performed.
+
+### Dynamic FFI loader path
+
+`mosey_server` imports `dlopen`, `dlsym` and `dlclose`; the FFI is not a direct `DT_NEEDED` dependency. The launch environment therefore now explicitly includes `/system_ext/lib64` ahead of `/system/lib64` and `/vendor/lib64` in `LD_LIBRARY_PATH`, while retaining the existing preload shims. A host regression test verifies the search path and that the mount check precedes native startup.
