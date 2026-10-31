@@ -6,7 +6,7 @@ timeout = 1800
 priority = 10
 
 [commands]
-before = []
+before = ["python3 tools/build-lsposed.py --sdk \"$ANDROID_HOME\""]
 run = [
   "python3 tools/check.py",
   "python3 -m unittest discover -s tests -p 'test_*.py'",
