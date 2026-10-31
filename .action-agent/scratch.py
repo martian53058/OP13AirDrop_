@@ -1,5 +1,5 @@
 """
-run = true
+run = false
 name = "ColorOS 17 adaptation regression suite (native runtime)"
 reason = "Validate source-level adaptation changes without connecting to or modifying a phone"
 timeout = 1800
