@@ -6,9 +6,7 @@ timeout = 1800
 priority = 10
 
 [commands]
-before = [
-  "python -m pip install --disable-pip-version-check -r requirements.txt || true"
-]
+before = []
 run = [
   "python3 tools/check.py",
   "python3 -m unittest discover -s tests -p 'test_*.py'",
