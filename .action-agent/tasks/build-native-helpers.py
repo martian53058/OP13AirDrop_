@@ -1,5 +1,5 @@
 """
-run = true
+run = false
 name = "Build OP13AirDrop native helpers"
 reason = "Build the repository's source-controlled ARM64 helpers using the documented Android SDK and NDK, and preserve the outputs as an ActionAgent artifact"
 timeout = 1200
