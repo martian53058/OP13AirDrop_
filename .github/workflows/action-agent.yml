@@ -32,6 +32,10 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+      - name: Install Android build tools
+        run: sdkmanager "platforms;android-36" "build-tools;36.0.0"
       - name: Run ActionAgent
         run: python .github/action_agent_runner.py
       - name: Upload ActionAgent output
