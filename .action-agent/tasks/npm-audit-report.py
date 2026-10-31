@@ -1,5 +1,5 @@
 """
-run = true
+run = false
 name = "Audit WebUI npm dependency vulnerabilities"
 reason = "Identify the exact dependency advisories reported by npm ci before deciding whether a safe lockfile update is needed"
 timeout = 600
