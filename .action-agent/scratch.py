@@ -1,5 +1,5 @@
 """
-run = true
+run = false
 name = "ColorOS 17 full source regression and component build"
 reason = "Run all host regressions and build every source-controlled userspace component using the pinned Android 17 toolchain"
 timeout = 1800
