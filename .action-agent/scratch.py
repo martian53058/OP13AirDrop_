@@ -1,18 +1,22 @@
 """
-run = false
-name = "Test ActionAgent concurrent state push handling"
-reason = "Reproduce and prevent non-fast-forward failures when a newer branch commit lands while ActionAgent is resetting runtime state"
-timeout = 300
+run = true
+name = "Validate target snapshot stock WLAN baseline gate"
+reason = "Test that the package builder refuses to relabel a different device's custom WLAN stack as target-built"
+timeout = 900
 priority = 10
 
 [commands]
 before = []
-run = ["python3 tests/test_action_agent_runner.py -v"]
+run = [
+  "python3 tools/check.py",
+  "python3 -m unittest discover -s tests -p 'test_*.py' -v",
+  "sh oshare/tests/run.sh"
+]
 after = []
 
 [output]
 mode = "both"
-path = ".action-agent/output/action-agent-push-race-tests.log"
+path = ".action-agent/output/target-snapshot-baseline-validation.log"
 artifact = true
 commit = false
 

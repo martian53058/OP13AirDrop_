@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
-"""Package the captured on-device coexistence stack with fast on every band.
+"""Package a target-device coexistence snapshot with fast on every band.
 
-This packager uses a device snapshot, not reference-r27: the
-deployed WLAN module and discovery APK implement additional concurrency modes.
+The snapshot is the source of the four shipped kernel modules; this packager
+does not rebuild them. It must be a target-device capture whose recorded stock
+QCA/mac80211 build IDs match the separately supplied target stock modules.
+A module ZIP from another device is not a target snapshot.
 """
 from pathlib import Path
 import argparse
@@ -32,6 +34,35 @@ def digest(data):
 
 def payload_files(root):
     return sorted(p for p in root.rglob('*') if p.is_file() and p.name != '.DS_Store')
+
+
+KERNEL_NOTE_PREFIX = '040000001400000003000000474e5500'
+
+
+def validate_snapshot_stock_baseline(identity_lines, stock_info):
+    """Refuse to relabel a different device's custom kernel stack as target-built."""
+    values = {}
+    for line in identity_lines:
+        if '=' not in line:
+            continue
+        key, value = line.split('=', 1)
+        values[key] = value
+
+    for name, info in stock_info.items():
+        expected_note = KERNEL_NOTE_PREFIX + info['build_id']
+        actual_note = values.get('STOCK_NOTE_' + name)
+        if actual_note != expected_note:
+            raise ValueError(
+                f'Snapshot stock baseline mismatch for {name}: '
+                f'snapshot={actual_note or "<missing>"}, target={expected_note}; '
+                'refusing to relabel custom kernel modules from a different stock baseline'
+            )
+        actual_sha = values.get('STOCK_SHA256_' + name)
+        if actual_sha not in (None, '', 'BUILD_REQUIRED') and actual_sha != info['sha256']:
+            raise ValueError(
+                f'Snapshot stock SHA256 mismatch for {name}: '
+                f'snapshot={actual_sha}, target={info["sha256"]}'
+            )
 
 
 def overlay_sources(module):
@@ -225,6 +256,11 @@ def main():
 
     identity_path = output / 'bin/kernel-identity.sh'
     identity_lines = identity_path.read_text().splitlines()
+    # Validate the snapshot's original stock baseline before replacing it with
+    # target rollback identities. Otherwise a different-device kernel stack
+    # could be relabeled as target-derived merely by supplying target stock files.
+    validate_snapshot_stock_baseline(identity_lines, stock_info)
+
     def set_identity_value(key, value):
         prefix = key + '='
         for index, line in enumerate(identity_lines):
@@ -233,9 +269,8 @@ def main():
                 return
         identity_lines.append(prefix + value)
 
-    note_prefix = '040000001400000003000000474e5500'
     for name, info in stock_info.items():
-        set_identity_value('STOCK_NOTE_' + name, note_prefix + info['build_id'])
+        set_identity_value('STOCK_NOTE_' + name, KERNEL_NOTE_PREFIX + info['build_id'])
         set_identity_value('STOCK_SHA256_' + name, info['sha256'])
     identity_path.write_text('\n'.join(identity_lines) + '\n')
 

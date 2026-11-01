@@ -4,16 +4,16 @@
 
 ## 正式发行包
 
-`tools/package-coex.py` 使用已校验的实机自动共存栈和当前源码构建的 OShare 桥接、WebUI，生成正式模块。发行包保留 mode3 驱动、Mosey 自动共存策略、对应 build ID，以及 2.4 / 5 / 6 GHz 下所选的 Fast 配置。内核栈来自已校验的实机快照；Mosey APK、`mosey_server` 与 FFI 使用显式本地输入并逐项校验，不由当前源码重新编译；输入哈希和脚本覆盖记录位于包内 `build-info.json`。
+`tools/package-coex.py` 使用目标设备的已验证实机快照和当前源码构建的 OShare 桥接、WebUI，生成正式模块。**快照是四个发行内核模块的实际来源；打包器不会重编译它们。** 因此 `--snapshot` 必须来自目标 PJZ110 / ColorOS 17.0.0.103 设备，且快照中记录的原厂 QCA/mac80211 Build ID 必须与本次提供的目标原厂模块一致。其他设备的参考 ZIP 不得充当目标快照；打包器现在会在覆盖身份字段前拒绝不匹配的基线。发行包保留 mode3 驱动、Mosey 自动共存策略、对应 build ID，以及 2.4 / 5 / 6 GHz 下所选的 Fast 配置。Mosey APK、`mosey_server` 与 FFI 使用显式本地输入并逐项校验，不由当前源码重新编译；输入哈希和脚本覆盖记录位于包内 `build-info.json`。
 
 ```sh
 python3 tools/build-native.py --sdk "$ANDROID_HOME" --ndk "$ANDROID_NDK_HOME"
 (cd oshare && ./gradlew :app:assembleRelease --offline)
 (cd webui && npm run check && npm run build)
 python3 tools/package-coex.py \
-  --snapshot local-inputs/coex/original-module.zip \
+  --snapshot local-inputs/coex/target-pjz110-module.zip \
   --bridge oshare/app/build/outputs/apk/release/app-release.apk \
-  --installer-base local-inputs/coex/original-module.zip \
+  --installer-base local-inputs/coex/target-pjz110-module.zip \
   --mosey-apks "local-inputs/mosey/Quick Share extension_1.0.980159239.apks" \
   --mosey-server local-inputs/mosey/mosey_server \
   --mosey-ffi local-inputs/mosey/libmosey_daemon_ffi.so \
@@ -72,7 +72,8 @@ sdkmanager --channel=1 "platforms;android-37.0"
 
 | 输入 | 用途 |
 | --- | --- |
-| 其他设备的参考模块 ZIP | 仅作为待审计快照/安装器基线；其设备声明不能代替目标设备 ABI 校验 |
+| 其他设备的参考模块 ZIP | 仅供静态审计；不得作为 `--snapshot` 或 `--installer-base`，因为打包器会保留快照内的自定义内核模块 |
+| 目标设备已验证模块快照（PJZ110 / ColorOS 17.0.0.103） | `--snapshot` 与 `--installer-base` 的来源；必须有与目标原厂 WLAN 模块匹配的 `STOCK_NOTE_*` 身份记录 |
 | 原版 Mosey60715 APKS bundle（base.apk + 全部 splits） | 系统包扫描、provider 认证和回调 APK 构建基线；打包时校验全部 15 个 APK 的 SHA256 |
 | 目标设备原厂 qca_cld3_peach_v2.ko 与 mac80211.ko | 固定恢复文件 SHA256/Build ID，并在启动及恢复前验证 /vendor/lib/modules 内容 |
 | 目标内核 Module.symvers | 必须来自精确目标内核构建；校验两个 stock 模块及 qca/mac80211/Wonder/provider 四个发行模块的全部导入 CRC |
