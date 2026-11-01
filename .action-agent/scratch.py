@@ -1,12 +1,12 @@
 """
-run = false
+run = true
 name = "Validate target snapshot stock WLAN baseline gate"
-reason = "Test that the package builder refuses to relabel a different device's custom WLAN stack as target-built"
-timeout = 900
+reason = "Test the snapshot and installer-base provenance guards alongside the complete host regression suite"
+timeout = 1200
 priority = 10
 
 [commands]
-before = []
+before = ["python3 tools/build-lsposed.py --sdk \"$ANDROID_HOME\""]
 run = [
   "python3 tools/check.py",
   "python3 -m unittest discover -s tests -p 'test_*.py' -v",

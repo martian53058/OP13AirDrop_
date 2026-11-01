@@ -39,7 +39,7 @@ def payload_files(root):
 KERNEL_NOTE_PREFIX = '040000001400000003000000474e5500'
 
 
-def validate_snapshot_stock_baseline(identity_lines, stock_info):
+def validate_snapshot_stock_baseline(identity_lines, stock_info, source_label='Snapshot'):
     """Refuse to relabel a different device's custom kernel stack as target-built."""
     values = {}
     for line in identity_lines:
@@ -53,14 +53,14 @@ def validate_snapshot_stock_baseline(identity_lines, stock_info):
         actual_note = values.get('STOCK_NOTE_' + name)
         if actual_note != expected_note:
             raise ValueError(
-                f'Snapshot stock baseline mismatch for {name}: '
+                f'{source_label} stock baseline mismatch for {name}: '
                 f'snapshot={actual_note or "<missing>"}, target={expected_note}; '
                 'refusing to relabel custom kernel modules from a different stock baseline'
             )
         actual_sha = values.get('STOCK_SHA256_' + name)
         if actual_sha not in (None, '', 'BUILD_REQUIRED') and actual_sha != info['sha256']:
             raise ValueError(
-                f'Snapshot stock SHA256 mismatch for {name}: '
+                f'{source_label} stock SHA256 mismatch for {name}: '
                 f'snapshot={actual_sha}, target={info["sha256"]}'
             )
 
@@ -141,7 +141,16 @@ def main():
                 raise ValueError(f'Installer hash mismatch: {name}')
         extract_zip_archive(archive, output)
 
+    installer_identity_path = output / 'bin/kernel-identity.sh'
+    if not installer_identity_path.is_file():
+        raise ValueError('Installer base is missing bin/kernel-identity.sh')
+    installer_identity_lines = installer_identity_path.read_text().splitlines()
+
     extract_snapshot(args.snapshot, captured)
+    snapshot_identity_path = captured / 'bin/kernel-identity.sh'
+    if not snapshot_identity_path.is_file():
+        raise ValueError('Target snapshot is missing bin/kernel-identity.sh')
+    snapshot_identity_lines = snapshot_identity_path.read_text().splitlines()
     manifest = dict(reversed(line.split(None, 1)) for line in
                     (captured / 'SHA256SUMS').read_text().splitlines())
     snapshot_hashes = {}
@@ -256,10 +265,11 @@ def main():
 
     identity_path = output / 'bin/kernel-identity.sh'
     identity_lines = identity_path.read_text().splitlines()
-    # Validate the snapshot's original stock baseline before replacing it with
-    # target rollback identities. Otherwise a different-device kernel stack
-    # could be relabeled as target-derived merely by supplying target stock files.
-    validate_snapshot_stock_baseline(identity_lines, stock_info)
+    # Validate both input archives before replacing any rollback identities.
+    # The installer base is extracted first and may otherwise leave stale
+    # different-device payload files behind the target snapshot overlay.
+    validate_snapshot_stock_baseline(snapshot_identity_lines, stock_info, 'Target snapshot')
+    validate_snapshot_stock_baseline(installer_identity_lines, stock_info, 'Installer base')
 
     def set_identity_value(key, value):
         prefix = key + '='
@@ -309,7 +319,12 @@ def main():
     info = {
         'version': version, 'versionCode': version_code, 'channel': 'stable',
         'kernel_rebuilt': False, 'callback_rebuilt': False,
-        'base': 'captured deployed PJZ110 auto-coexistence stack',
+        'base': 'caller-supplied snapshot; four kernel modules retained without rebuild',
+        'snapshot_provenance': {
+            'origin': 'caller-supplied archive',
+            'deployment_independently_verified': False,
+            'stock_wlan_build_ids_match_target_inputs': True,
+        },
         'snapshot_sha256': digest(args.snapshot.read_bytes()),
         'installer_base_sha256': digest(args.installer_base.read_bytes()),
         'bridge_sha256': digest(bridge_data),
@@ -339,7 +354,6 @@ def main():
         'profile': {'phy': 3, 'mcs': 8, 'nss': 2, 'amsdu': 2,
                     'amsdu_max': 5, 'amsdu_bytes': 7935, 'collect_us': 1000},
         'source_commit': subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=ROOT, text=True).strip(),
-        'deployed_source_differs_from_workspace': True,
         'stability_patch': stability,
         'channel_setup': {
             'profile': 'freq20', 'frequency_mhz': 5745,

@@ -43,12 +43,22 @@ class SnapshotStockBaselineTests(unittest.TestCase):
             + PACKAGE.KERNEL_NOTE_PREFIX
             + "f9b56d574a80d18b2b93f44817ac44ddd4753f24"
         )
-        with self.assertRaisesRegex(ValueError, "Snapshot stock baseline mismatch for qca_cld3_peach_v2"):
-            PACKAGE.validate_snapshot_stock_baseline(lines, self.stock)
+        with self.assertRaisesRegex(ValueError, "Target snapshot stock baseline mismatch for qca_cld3_peach_v2"):
+            PACKAGE.validate_snapshot_stock_baseline(lines, self.stock, "Target snapshot")
 
     def test_missing_stock_build_id_is_rejected(self):
         with self.assertRaisesRegex(ValueError, "Snapshot stock baseline mismatch for mac80211"):
             PACKAGE.validate_snapshot_stock_baseline(self.lines[:1], self.stock)
+
+    def test_installer_base_stock_mismatch_is_rejected_separately(self):
+        lines = list(self.lines)
+        lines[1] = (
+            "STOCK_NOTE_mac80211="
+            + PACKAGE.KERNEL_NOTE_PREFIX
+            + "06b950ed78a4206dd03433f563067448057b4925"
+        )
+        with self.assertRaisesRegex(ValueError, "Installer base stock baseline mismatch for mac80211"):
+            PACKAGE.validate_snapshot_stock_baseline(lines, self.stock, "Installer base")
 
     def test_stock_sha_mismatch_is_rejected_when_snapshot_records_it(self):
         lines = list(self.lines) + ["STOCK_SHA256_mac80211=" + "c" * 64]
