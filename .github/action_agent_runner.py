@@ -395,6 +395,107 @@ def reset_task_run_flag(task: Task) -> bool:
     return True
 
 
+def push_state_commit() -> None:
+    """Push ActionAgent state without overwriting a newer branch update."""
+    push = subprocess.run(
+        ["git", "push"],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+    )
+    if push.returncode == 0:
+        return
+
+    print("ActionAgent: initial state push failed; checking for concurrent branch updates.")
+    print(push.stdout)
+
+    branch_result = subprocess.run(
+        ["git", "branch", "--show-current"],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+    )
+    branch = branch_result.stdout.strip()
+    if branch_result.returncode != 0 or not branch:
+        raise subprocess.CalledProcessError(push.returncode, ["git", "push"], output=push.stdout)
+
+    remote_ref = f"refs/remotes/origin/{branch}"
+    fetch_ref = f"refs/heads/{branch}:{remote_ref}"
+    fetch = subprocess.run(
+        ["git", "fetch", "origin", fetch_ref],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+    )
+    if fetch.returncode != 0:
+        print(fetch.stdout)
+        raise subprocess.CalledProcessError(fetch.returncode, ["git", "fetch", "origin", fetch_ref],
+                                            output=fetch.stdout)
+
+    base = subprocess.run(
+        ["git", "merge-base", "HEAD", remote_ref],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+    )
+    if base.returncode != 0 or not base.stdout.strip():
+        print(base.stdout)
+        raise subprocess.CalledProcessError(base.returncode or push.returncode,
+                                            ["git", "merge-base", "HEAD", remote_ref],
+                                            output=base.stdout)
+
+    base_sha = base.stdout.strip()
+
+    def changed_paths(ref: str) -> set[str]:
+        result = subprocess.run(
+            ["git", "diff", "--name-only", f"{base_sha}..{ref}"],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+        )
+        if result.returncode != 0:
+            raise subprocess.CalledProcessError(result.returncode,
+                                                ["git", "diff", "--name-only", f"{base_sha}..{ref}"],
+                                                output=result.stdout)
+        return {line.strip() for line in result.stdout.splitlines() if line.strip()}
+
+    local_paths = changed_paths("HEAD")
+    remote_paths = changed_paths(remote_ref)
+    overlap = sorted(local_paths & remote_paths)
+    if overlap:
+        print(
+            "ActionAgent: skipped pushing stale runtime state because the newer remote "
+            "branch changed the same paths: " + ", ".join(overlap)
+        )
+        print("The newer task definition is preserved; this run's output remains in its artifact.")
+        return
+
+    rebase = subprocess.run(
+        ["git", "rebase", remote_ref],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+    )
+    if rebase.returncode != 0:
+        subprocess.run(["git", "rebase", "--abort"], stdout=subprocess.PIPE,
+                       stderr=subprocess.STDOUT, text=True)
+        print("ActionAgent: skipped runtime-state push because it could not be rebased safely.")
+        print(rebase.stdout)
+        return
+
+    retry = subprocess.run(
+        ["git", "push"],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+    )
+    if retry.returncode != 0:
+        print(retry.stdout)
+        raise subprocess.CalledProcessError(retry.returncode, ["git", "push"], output=retry.stdout)
+
+    print("ActionAgent: rebased the runtime-state commit onto the updated branch and pushed it.")
+
+
 def git_commit(paths: list[Path], message: str) -> None:
     paths = [path for path in paths if path.exists()]
     if not paths:
@@ -429,7 +530,7 @@ def git_commit(paths: list[Path], message: str) -> None:
     print(result.stdout)
 
     if result.returncode == 0:
-        subprocess.run(["git", "push"], check=True)
+        push_state_commit()
 
 
 def write_result_file(path: Path, result: dict[str, Any]) -> None:
