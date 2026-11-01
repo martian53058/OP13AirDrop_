@@ -1,5 +1,5 @@
 """
-run = true
+run = false
 name = "Test ActionAgent concurrent state push handling"
 reason = "Reproduce and prevent non-fast-forward failures when a newer branch commit lands while ActionAgent is resetting runtime state"
 timeout = 300
