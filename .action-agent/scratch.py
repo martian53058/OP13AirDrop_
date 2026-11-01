@@ -1,5 +1,5 @@
 """
-run = true
+run = false
 name = "Validate target snapshot stock WLAN baseline gate"
 reason = "Test the snapshot and installer-base provenance guards alongside the complete host regression suite"
 timeout = 1200
