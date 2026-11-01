@@ -1,5 +1,5 @@
 """
-run = true
+run = false
 name = "Final host regression after WebUI lockfile security fix"
 reason = "Re-run all source checks, 179+ Python tests, OShare regressions, WebUI security and build checks, native helpers and Android API 37 bridge compilation against the updated branch"
 timeout = 1800
