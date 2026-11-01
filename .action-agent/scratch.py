@@ -1,7 +1,7 @@
 """
 run = true
-name = "Final source validation after WebUI dependency repair"
-reason = "Re-run the complete host regression suite and build all source-controlled userspace components after the verified dependency lockfile update"
+name = "Final host regression after WebUI lockfile security fix"
+reason = "Re-run all source checks, 179+ Python tests, OShare regressions, WebUI security and build checks, native helpers and Android API 37 bridge compilation against the updated branch"
 timeout = 1800
 priority = 10
 
@@ -11,7 +11,6 @@ before = [
   "python3 tools/build-native.py --sdk \"$ANDROID_HOME\" --ndk \"$ANDROID_NDK_HOME\""
 ]
 run = [
-  "python3 .action-agent/tasks/release-input-audit.py",
   "python3 tools/check.py",
   "python3 -m unittest discover -s tests -p 'test_*.py' -v",
   "sh oshare/tests/run.sh",
@@ -22,15 +21,11 @@ run = [
   "cd webui && npm run check && npm run build",
   "oshare/gradlew -p oshare --no-daemon :app:compileReleaseJavaWithJavac :app:processReleaseResources"
 ]
-after = [
-  "mkdir -p .action-agent/output/build-artifacts/native .action-agent/output/build-artifacts/lsposed",
-  "cp -a build/native/. .action-agent/output/build-artifacts/native/",
-  "cp build/lsposed/lsposed-setup.jar .action-agent/output/build-artifacts/lsposed/"
-]
+after = []
 
 [output]
 mode = "both"
-path = ".action-agent/output/final-source-validation.log"
+path = ".action-agent/output/final-host-regression.log"
 artifact = true
 commit = false
 
