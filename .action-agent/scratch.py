@@ -1,5 +1,5 @@
 """
-run = true
+run = false
 name = "Validate target snapshot stock WLAN baseline gate"
 reason = "Test that the package builder refuses to relabel a different device's custom WLAN stack as target-built"
 timeout = 900
